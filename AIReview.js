@@ -11,7 +11,7 @@ const execAsync = promisify(execFile);
 async function getGitDiff(repo, rev) {
    repo = path.resolve(repo)
    try {
-      await access(path.join(repo, ".git"), constants.F_OK);
+      await execAsync("git", ["rev-parse", "--is-inside-work-tree"]);
    } catch (error) {
       throw new Error(`${repo} is not a vaild git repo`);
    }
@@ -33,7 +33,7 @@ async function getGitDiff(repo, rev) {
    }
 }
 
-async function main(repo, opts) {
+async function main(repos, opts) {
    try {
       const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -50,7 +50,10 @@ async function main(repo, opts) {
          throw new Error(`Unknown Model ${opts.model}`);
       }
 
-      const Diff = await getGitDiff(repo, opts.revision);
+      let Diff = "";
+      for (const repo of repos)
+         Diff += (await getGitDiff(repo, opts.revision)) + "\n";
+
       if (!Diff) {
          throw new Error("No changes to review.");
       }
@@ -69,7 +72,7 @@ async function main(repo, opts) {
    }
 }
 program.version("0.2.0")
-   .argument('[repo]', 'Git Repo Path', '.')
+   .argument('[repo...]', 'Git Repo Path', ['.'])
    .option('-m, --model <model>', 'AI model to use', "Google.Gemini31FlashLite")
    .option('-r, --revision <revision>', 'base git rev of the diff', null)
    .option('-o, --output <output>', 'log file', 'last.log')

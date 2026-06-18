@@ -39,3 +39,13 @@ export async function Gemini31FlashLite(SystemPrompt, Diff) {
       output: 1.5
    }, SystemPrompt, Diff);
 }
+
+export async function Gemini31Pro(SystemPrompt, Diff) {
+   return GeminiLLMRequest({
+      name: "gemini-3.1-pro-preview",
+      context: 1048576,
+      input: 2,
+      output: 12,
+   }, SystemPrompt, Diff);
+}
+
