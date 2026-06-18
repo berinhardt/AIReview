@@ -11,9 +11,8 @@ async function GeminiLLMRequest(model, SystemPrompt, Diff) {
       config: {
          systemInstruction: SystemPrompt,
          thinkingConfig: {
-            thinkingLevel: ThinkingLevel.MEDIUM
-         },
-         temperature: 0.2
+            thinkingLevel: ThinkingLevel.HIGH
+         }
       },
       contents: `Review the following code diff: \n\n${Diff}`,
    });
