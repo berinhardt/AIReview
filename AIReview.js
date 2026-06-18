@@ -61,8 +61,8 @@ async function main(repo, opts) {
       if (!review) {
          throw new Error("No response from model");
       }
-      console.log(review);
-      if (opts.output) await writeFile(opts.output, review, "utf-8");
+      console.log(`USD ${review.cost}`);
+      if (opts.output) await writeFile(opts.output, review.text, "utf-8");
    } catch (error) {
       console.error(error);
       process.exit(1);

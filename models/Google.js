@@ -18,12 +18,25 @@ async function GeminiLLMRequest(model, SystemPrompt, Diff) {
       contents: `Review the following code diff: \n\n${Diff}`,
    });
 
-   return response.text;
+   const result = {
+      text: response.text,
+      cost: calculateCosts(model, response.usageMetadata)
+   };
+
+   return result;
+}
+function calculateCosts(model, usage) {
+   const { promptTokenCount = 0, candidatesTokenCount = 0, thoughtsTokenCount = 0 } = usage || {};
+   const { input = 0, output = 0 } = model;
+   const cost = (promptTokenCount * input + (candidatesTokenCount + thoughtsTokenCount) * output) / 1e6;
+   return Number(cost.toFixed(6));
 }
 
 export async function Gemini31FlashLite(SystemPrompt, Diff) {
    return GeminiLLMRequest({
       name: "gemini-3.1-flash-lite",
-      context: 1048576
+      context: 1048576,
+      input: 0.25,
+      output: 1.5
    }, SystemPrompt, Diff);
 }
