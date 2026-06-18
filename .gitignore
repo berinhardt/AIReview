@@ -1,4 +1,4 @@
-xai.key
+.env
 node_modules
 package-lock.json
 last.log
