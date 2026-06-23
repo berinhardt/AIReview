@@ -64,8 +64,12 @@ async function main(repos, opts) {
       if (!review) {
          throw new Error("No response from model");
       }
-      console.log(`USD ${review.cost}`);
-      if (opts.output) await writeFile(opts.output, review.text, "utf-8");
+      const result = review.text + `\n\nUSD ${review.cost}`;
+      if (opts.output == "-") {
+         console.log(result);
+      } else {
+         await writeFile(opts.output, result, "utf-8");
+      }
    } catch (error) {
       console.error(error);
       process.exit(1);
