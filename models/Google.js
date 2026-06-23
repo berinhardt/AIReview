@@ -10,6 +10,7 @@ async function GeminiLLMRequest(model, SystemPrompt, Diff) {
       model: model.name,
       config: {
          systemInstruction: SystemPrompt,
+         temperature: 0.1,
          thinkingConfig: {
             thinkingLevel: ThinkingLevel.HIGH
          }
