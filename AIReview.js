@@ -5,6 +5,7 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import path from "path";
 import { Dirname, LoadLLMModel } from './core/System.js';
+import { Agent } from './core/Agent.js'
 
 const execAsync = promisify(execFile);
 
@@ -35,7 +36,7 @@ async function getGitDiff(repo, rev) {
 
 async function main(repos, opts) {
    try {
-     const model = await LoadLLMModel(opts.model);
+      const model = await LoadLLMModel(opts.model);
 
       let Diff = "";
       for (const repo of repos)
@@ -46,7 +47,8 @@ async function main(repos, opts) {
       }
       const SystemPrompt = (await readFile(path.join(Dirname(import.meta.url), "SystemPrompt.txt"), "utf-8")).trim();
 
-      const review = await model(SystemPrompt, `Review the following code diff: \n\n${Diff}`);
+      const agent = new Agent(model, SystemPrompt);
+      const review = await agent.Task(`Review the following code diff: \n\n${Diff}`);
 
       if (!review) {
          throw new Error("No response from model");
