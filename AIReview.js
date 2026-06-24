@@ -6,8 +6,17 @@ import { promisify } from "util";
 import path from "path";
 import { Dirname, LoadLLMModel } from './core/System.js';
 import { Agent } from './core/Agent.js'
+import { createWriteStream } from "fs";
 
 const execAsync = promisify(execFile);
+
+program.version("0.2.0")
+   .argument('[repo...]', 'Git Repo Path', ['.'])
+   .option('-m, --model <model>', 'AI model to use', "Google.Gemini31FlashLite")
+   .option('-r, --revision <revision>', 'base git rev of the diff', null)
+   .option('-o, --output <output>', 'log file', '-')
+   .action(main)
+   .parse(process.argv);
 
 async function getGitDiff(repo, rev) {
    repo = path.resolve(repo)
@@ -36,8 +45,10 @@ async function getGitDiff(repo, rev) {
 
 async function main(repos, opts) {
    try {
+      const output = opts.output == "-" ? process.stdout : createWriteStream(opts.output, { encoding: "utf8" });
       const model = await LoadLLMModel(opts.model);
 
+      output.write("Fetching diff...\n");
       let Diff = "";
       for (const repo of repos)
          Diff += (await getGitDiff(repo, opts.revision)) + "\n";
@@ -45,30 +56,17 @@ async function main(repos, opts) {
       if (!Diff) {
          throw new Error("No changes to review.");
       }
-      const SystemPrompt = (await readFile(path.join(Dirname(import.meta.url), "SystemPrompt.txt"), "utf-8")).trim();
+      const agent = new Agent(model, await Agent.LoadDefaultPersonality("Reviewer"));
+      const stream = agent.Task(`Review the following code diff: \n\n${Diff}`);
 
-      const agent = new Agent(model, SystemPrompt);
-      const review = await agent.Task(`Review the following code diff: \n\n${Diff}`);
-
-      if (!review) {
-         throw new Error("No response from model");
-      }
-      const result = review.text + `\n\nUSD ${review.cost}`;
-      if (opts.output == "-") {
-         console.log(result);
-      } else {
-         await writeFile(opts.output, result, "utf-8");
-      }
+      output.write(`Connecting to ${opts.model}...\n`);
+      stream.pipe(output);
+      stream.on("end", () => {
+         output.write(`\n\nUSD ${agent.cost}`);
+      });
    } catch (error) {
       console.error(error);
       process.exit(1);
    }
 }
-program.version("0.2.0")
-   .argument('[repo...]', 'Git Repo Path', ['.'])
-   .option('-m, --model <model>', 'AI model to use', "Google.Gemini31FlashLite")
-   .option('-r, --revision <revision>', 'base git rev of the diff', null)
-   .option('-o, --output <output>', 'log file', 'last.log')
-   .action(main)
-   .parse(process.argv);
 
