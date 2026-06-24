@@ -1,10 +1,10 @@
 import "dotenv/config";
-import { access, constants, readFile, readdir, writeFile } from "fs/promises";
+import { readFile, writeFile } from "fs/promises";
 import { program } from 'commander';
 import { execFile } from "child_process";
 import { promisify } from "util";
 import path from "path";
-import { fileURLToPath } from "url";
+import { Dirname, LoadLLMModel } from './core/System.js';
 
 const execAsync = promisify(execFile);
 
@@ -35,20 +35,7 @@ async function getGitDiff(repo, rev) {
 
 async function main(repos, opts) {
    try {
-      const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-      const AVAILABLE_MODELS = await readdir(path.join(__dirname, "models"));
-      const [moduleName, moduleMethod] = opts.model.split(/\./, 2);
-      if (AVAILABLE_MODELS.indexOf(`${moduleName}.js`) == -1) {
-         throw new Error(`Unknown Model Family ${opts.model}`);
-      }
-      const modulePath = path.join(__dirname, "models", `${moduleName}.js`);
-      await access(modulePath, constants.F_OK);
-      const module = await import(`file://${modulePath}`);
-      const model = module[moduleMethod];
-      if (typeof model !== 'function') {
-         throw new Error(`Unknown Model ${opts.model}`);
-      }
+     const model = await LoadLLMModel(opts.model);
 
       let Diff = "";
       for (const repo of repos)
@@ -57,9 +44,9 @@ async function main(repos, opts) {
       if (!Diff) {
          throw new Error("No changes to review.");
       }
-      const SystemPrompt = (await readFile(path.join(__dirname, "SystemPrompt.txt"), "utf-8")).trim();
+      const SystemPrompt = (await readFile(path.join(Dirname(import.meta.url), "SystemPrompt.txt"), "utf-8")).trim();
 
-      const review = await model(SystemPrompt, Diff);
+      const review = await model(SystemPrompt, `Review the following code diff: \n\n${Diff}`);
 
       if (!review) {
          throw new Error("No response from model");

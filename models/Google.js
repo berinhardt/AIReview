@@ -1,7 +1,7 @@
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
-async function GeminiLLMRequest(model, SystemPrompt, Diff) {
-   if (model.context && SystemPrompt.length + Diff.length >= model.context * 4) {
-      throw new Error("Diff too large");
+async function GeminiLLMRequest(model, SystemPrompt, Input) {
+   if (model.context && SystemPrompt.length + Input.length >= model.context * 4) {
+      throw new Error("Input too large");
    }
    const APIKEY = process.env.GEMINI_API_KEY;
    if (!APIKEY) throw new Error("NO API KEY FOUND!");
@@ -15,7 +15,7 @@ async function GeminiLLMRequest(model, SystemPrompt, Diff) {
             thinkingLevel: ThinkingLevel.HIGH
          }
       },
-      contents: `Review the following code diff: \n\n${Diff}`,
+      contents: Input,
    });
 
    const result = {
@@ -32,21 +32,21 @@ function calculateCosts(model, usage) {
    return Number(cost.toFixed(6));
 }
 
-export async function Gemini31FlashLite(SystemPrompt, Diff) {
+export async function Gemini31FlashLite(SystemPrompt, Input) {
    return GeminiLLMRequest({
       name: "gemini-3.1-flash-lite",
       context: 1048576,
       input: 0.25,
       output: 1.5
-   }, SystemPrompt, Diff);
+   }, SystemPrompt, Input);
 }
 
-export async function Gemini31Pro(SystemPrompt, Diff) {
+export async function Gemini31Pro(SystemPrompt, Input) {
    return GeminiLLMRequest({
       name: "gemini-3.1-pro-preview",
       context: 1048576,
       input: 2,
       output: 12,
-   }, SystemPrompt, Diff);
+   }, SystemPrompt, Input);
 }
 
