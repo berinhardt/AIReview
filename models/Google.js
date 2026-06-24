@@ -1,5 +1,5 @@
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
-async function GeminiLLMRequest(model, SystemPrompt, Input, previousInteractionId = null) {
+async function GeminiLLMRequest(model, SystemPrompt, Input, config = {}) {
    if (model.context && SystemPrompt.length + Input.length >= model.context * 4) {
       throw new Error("Input too large");
    }
@@ -11,11 +11,12 @@ async function GeminiLLMRequest(model, SystemPrompt, Input, previousInteractionI
       system_instruction: SystemPrompt,
       input: Input,
 
-      ...(previousInteractionId && {previousInteractionId}),
+      previous_interaction_id: config.id,
+      tools:(config.tools || []),
 
       generation_config: {
          temperature: 0.1,
-         thinking_level:ThinkingLevel.HGIH
+         thinking_level:"high"
       },
    });
 
@@ -44,21 +45,21 @@ function calculateCosts(model, usage) {
    return Number(cost.toFixed(6));
 }
 
-export async function Gemini31FlashLite(SystemPrompt, Input, id = null) {
+export async function Gemini31FlashLite(SystemPrompt, Input, config = {}) {
    return GeminiLLMRequest({
       name: "gemini-3.1-flash-lite",
       context: 1048576,
       input: 0.25,
       output: 1.5
-   }, SystemPrompt, Input, id);
+   }, SystemPrompt, Input, config);
 }
 
-export async function Gemini31Pro(SystemPrompt, Input, id = null) {
+export async function Gemini31Pro(SystemPrompt, Input, config = {}) {
    return GeminiLLMRequest({
       name: "gemini-3.1-pro-preview",
       context: 1048576,
       input: 2,
       output: 12,
-   }, SystemPrompt, Input, id);
+   }, SystemPrompt, Input, config);
 }
 
