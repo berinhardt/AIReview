@@ -1,8 +1,28 @@
 import path from "path";
 import { fileURLToPath } from "url";
-import { access, constants, readdir } from "fs/promises";
+import { access, constants, readdir, realpath } from "fs/promises";
 export function Dirname(meta_url) {
-  return path.dirname(fileURLToPath(meta_url));
+   return path.dirname(fileURLToPath(meta_url));
+}
+export async function SanitizePath(filename, chroot) {
+   const cwd = await realpath(chroot);
+   let targetPath = path.resolve(cwd, filename);
+   let checkPath = targetPath;
+   while (true) {
+      try {
+         const realPath = await realpath(checkPath);
+         if (!realPath.startsWith(cwd)) throw new Error("Permission Denied");
+         return targetPath;
+      } catch (error) {
+         if (error.code === 'ENOENT') {
+            const parent = path.dirname(checkPath);
+            if (parent === checkPath) throw new Error("Permission Denied");
+            checkPath = parent;
+         } else {
+            throw new Error("Permission Denied");
+         }
+      }
+   }
 }
 export async function LoadLLMModel(model) {
    const __dirname = path.join(Dirname(import.meta.url), "..");
@@ -19,5 +39,5 @@ export async function LoadLLMModel(model) {
    if (typeof rval !== 'function') {
       throw new Error(`Unknown Model ${model}`);
    }
-  return rval;
+   return rval;
 }

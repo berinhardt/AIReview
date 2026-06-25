@@ -2,7 +2,8 @@
    "type": "module",
    "dependencies": {
       "@google/genai": "^2.8.0",
-      "dotenv": "^17.4.2",
-      "commander": "^15.0.0"
+      "commander": "^15.0.0",
+      "diff": "^9.0.0",
+      "dotenv": "^17.4.2"
    }
 }

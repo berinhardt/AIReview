@@ -42,7 +42,7 @@ function GeminiLLMRequest(model, SystemPrompt, Input, config = {}) {
                thinking_level: thinking_level
             },
          });
-         let last_step = "";
+         let DeltaHandler = null;
          for await (const data of interaction) {
             if (stream.closed) break;
             stream.emit("raw", data);
@@ -55,20 +55,20 @@ function GeminiLLMRequest(model, SystemPrompt, Input, config = {}) {
                   stream.emit("status", data.status);
                   break;
                case 'step.start':
+                  DeltaHandler = DeltaHandlerStore[data.step.type];
+                  if (DeltaHandler) DeltaHandler = DeltaHandler(data.step, stream);
                   stream.emit("new_step", data.index, data.step.type);
-                  stream.emit("status", data.step.type);
-                  last_step = data.step.type;
+                  stream.emit("status", `#${data.index}> ${data.step.type}`);
                   break;
                case 'step.delta':
                   stream.emit("update_" + data.delta.type, data.index, data.delta);
-                  if (last_step == 'model_output' && data.delta.type == 'text')
-                     stream.push(data.delta.text);
+                  if (DeltaHandler) DeltaHandler.parse(data.delta);
                   break;
                case 'step.stop':
-                  if (last_step == 'model_output') stream.push("\n");
+                  if (DeltaHandler) DeltaHandler.end();
+                  DeltaHandler = null;
                   stream.emit("end_step", data.index);
-                  stream.emit("status", `${last_step} done`);
-                  last_step = "";
+                  stream.emit("status", `#${data.index} done`);
                   break;
                case 'interaction.completed':
                   abortContext.id = null;
@@ -83,6 +83,22 @@ function GeminiLLMRequest(model, SystemPrompt, Input, config = {}) {
    })();
    return stream;
 }
+const DeltaHandlerStore = {
+   model_output: (step, stream) => ({
+      parse(delta) { delta.type == "text" && stream.push(delta.text); },
+      end() { stream.push("\n"); }
+   }),
+   function_call: (step, stream) => ({
+      data: {
+         call_id: step.id,
+         name: step.name,
+         param: []
+      },
+      parse(delta) { delta.type == "arguments_delta" && this.data.param.push(delta.arguments); },
+      end() { this.data.param = JSON.parse(this.data.param.join("")); stream.emit("call_tool", this.data); }
+   })
+}
+
 async function GeminiAbort(id) {
    const APIKEY = process.env.GEMINI_API_KEY;
    if (!APIKEY) throw new Error("NO API KEY FOUND!");

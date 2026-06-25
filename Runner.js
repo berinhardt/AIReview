@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { appendFile, readFile, writeFile } from "fs/promises";
+import { readFile } from "fs/promises";
 import readline from 'readline/promises';
 import { program } from 'commander';
 import { LoadLLMModel } from './core/System.js';
@@ -7,40 +7,18 @@ import { Agent } from './core/Agent.js'
 import { text } from "stream/consumers";
 import { createWriteStream } from "fs";
 import { pipeline } from "stream/promises";
-import { PassThrough, Transform, Writable } from "stream";
+import { Transform } from "stream";
+import { CreateFile, ModifyFile, ReadFile } from "./tools/FileTools.js";
 
 program.version("0.2.0")
    .option('-p, --personality <personality>', 'AI personality file', null)
    .option('-t, --task <task>', 'Task file', '-')
    .option('-m, --model <model>', 'AI model to use', "Google.Gemini31FlashLite")
+   .option('-d, --chroot <dir>', 'Exposed root of paths to AI', "sandbox")
    .option('-o, --output <output>', 'Output file', '-')
+   .option('-l, --logfile <logfile>', 'Agent log file', 'last.log')
    .action(main)
    .parse(process.argv);
-async function readTask(task) {
-   if (task && task != "-") return await readFile(task);
-   else if (!process.stdin.isTTY) return await text(process.stdin);
-   else {
-      console.log("\n> ");
-      const rl = readline.createInterface(process.stdin);
-      const lines = [];
-      let nlacc = 0;
-
-      try {
-         for await (const l of rl) {
-            if (l.trim() === '') {
-               if (++nlacc == 2) {
-                  lines.pop()
-                  break;
-               }
-            } else nlacc = 0;
-            lines.push(l);
-         }
-      } finally {
-         rl.close();
-      }
-      return lines.join("\n");
-   }
-}
 async function executeTask(agent, task, output) {
    if (!task) return;
 
@@ -52,11 +30,15 @@ async function executeTask(agent, task, output) {
    return await pipeline(stream, appendCost, output, { end: false });
 }
 async function main(opts) {
+   const LOGFILE = createWriteStream(opts.logfile);
    try {
       const model = await LoadLLMModel(opts.model);
       const personality = opts.personality ? await readFile(opts.personality) : await Agent.LoadDefaultPersonality('Default');
-      const agent = new Agent(model, personality);
+      const agent = new Agent(model, personality, opts.chroot);
+
+      agent.addTools([CreateFile, ReadFile, ModifyFile]);
       agent.status = (str) => process.stderr.write(`[STATUS] ${str}\n`);
+      agent.logger = (str) => LOGFILE.write(str);
 
       const output = opts.output == "-" ? process.stdout : createWriteStream(opts.output, { encoding: "utf8" });
       try {
@@ -100,5 +82,7 @@ async function main(opts) {
    } catch (error) {
       console.error(error);
       process.exit(1);
+   } finally {
+      LOGFILE.end();
    }
 }
