@@ -46,7 +46,6 @@ async function getGitDiff(repo, rev) {
 }
 async function main(repos, opts) {
    try {
-      const output = opts.output == "-" ? process.stdout : createWriteStream(opts.output, { encoding: "utf8" });
       const model = await LoadLLMModel(opts.model);
 
       process.stderr.write("[STATUS] Fetching diff...\n");
@@ -58,16 +57,20 @@ async function main(repos, opts) {
          throw new Error("No changes to review.");
       }
       const agent = new Agent(model, await Agent.LoadDefaultPersonality("Reviewer"));
-      agent.status = (s) => process.stderr.write(`[STATUS] ${s}\n`); 
+      agent.status = (s) => process.stderr.write(`[STATUS] ${s}\n`);
       const stream = agent.Task(`Review the following code diff: \n\n${Diff}`);
 
       process.stderr.write(`[STATUS] Connecting to ${opts.model}...\n`);
-     const appendCost = new Transform({
-       transform(chunk,encoding,cb) { cb(null,chunk); },
-       flush(cb) { this.push(`\n\nUSD ${agent.cost}\n`); cb(); }
-     });
-     await pipeline(stream, appendCost, output, {end:false});
-     if (output != process.stdout) output.end();
+      const appendCost = new Transform({
+         transform(chunk, encoding, cb) { cb(null, chunk); },
+         flush(cb) { this.push(`\n\nUSD ${agent.cost}\n`); cb(); }
+      });
+      const output = opts.output == "-" ? process.stdout : createWriteStream(opts.output, { encoding: "utf8" });
+      try {
+         await pipeline(stream, appendCost, output, { end: false });
+      } finally {
+         if (output != process.stdout && !output.closed) output.end();
+      }
    } catch (error) {
       console.error(error);
       process.exit(1);

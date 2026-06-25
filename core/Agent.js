@@ -1,7 +1,9 @@
 import { Dirname } from "./System.js";
 import { readFile } from "fs/promises";
 import path from "path";
-import { Readable } from "stream";
+import { PassThrough, Readable } from "stream";
+import { pipeline } from "stream/promises";
+
 export class Agent {
    constructor(llm, personality) {
       this.llm = llm;
@@ -34,7 +36,10 @@ export class Agent {
          myAgent.cost += cost;
       });
       result.on("raw", (data) => myAgent.__LOG(data));
-      return result;
+      result.on("end", () => result.removeAllListeners());
+      const proxy = new PassThrough();
+      pipeline(result, proxy);
+      return proxy;
    }
    __STATUS(str) {
       if (typeof this.status === "function") this.status(str);

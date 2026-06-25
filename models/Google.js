@@ -5,7 +5,7 @@ function GeminiLLMRequest(model, SystemPrompt, Input, config = {}) {
       id: null
    };
    const stream = new Readable({
-      read() {},
+      read() { },
       async destroy(err, cb) {
          if (abortContext.id !== null) {
             this.emit("status", "Aborting...");
@@ -44,6 +44,7 @@ function GeminiLLMRequest(model, SystemPrompt, Input, config = {}) {
          });
          let last_step = "";
          for await (const data of interaction) {
+            if (stream.closed) break;
             stream.emit("raw", data);
             switch (data.event_type) {
                case 'interaction.created':
@@ -60,7 +61,7 @@ function GeminiLLMRequest(model, SystemPrompt, Input, config = {}) {
                   break;
                case 'step.delta':
                   stream.emit("update_" + data.delta.type, data.index, data.delta);
-                  if (last_step == 'model_output' && data.delta.type == 'text') 
+                  if (last_step == 'model_output' && data.delta.type == 'text')
                      stream.push(data.delta.text);
                   break;
                case 'step.stop':
