@@ -49,7 +49,6 @@ function GeminiLLMRequest(model, SystemPrompt, Input, config = {}) {
                case 'interaction.created':
                   abortContext.id = data.interaction.id;
                   stream.emit("created", data.interaction.id);
-                  stream.emit("status", data.interaction.status)
                   break;
                case 'interaction.status_update':
                   stream.emit("status", data.status);

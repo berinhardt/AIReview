@@ -6,7 +6,8 @@ import { LoadLLMModel } from './core/System.js';
 import { Agent } from './core/Agent.js'
 import { text } from "stream/consumers";
 import { createWriteStream } from "fs";
-import { finished } from "stream/promises";
+import { pipeline } from "stream/promises";
+import { PassThrough, Transform, Writable } from "stream";
 
 program.version("0.2.0")
    .option('-p, --personality <personality>', 'AI personality file', null)
@@ -44,11 +45,11 @@ async function executeTask(agent, task, output) {
    if (!task) return;
 
    const stream = agent.Task(task);
-   stream.pipe(output);
-   stream.on("end", () => {
-      output.write(`\n\nUSD ${agent.cost}\n`);
+   const appendCost = new Transform({
+      transform(chunk,encoding,cb) { cb(null,chunk); },
+      flush(cb) { this.push(`\n\nUSD ${agent.cost}\n`); cb(); }
    });
-   return await finished(stream);
+   return await pipeline(stream, appendCost, output, {end:false});
 }
 async function main(opts) {
    try {
@@ -96,6 +97,7 @@ async function main(opts) {
             rl.close();
          }
       }
+      if (output != process.stdout) output.end();
    } catch (error) {
       console.error(error);
       process.exit(1);

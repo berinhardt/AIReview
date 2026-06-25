@@ -1,5 +1,7 @@
 import "dotenv/config";
 import { readFile, writeFile } from "fs/promises";
+import { pipeline } from "stream/promises";
+import { Transform } from "stream";
 import { program } from 'commander';
 import { execFile } from "child_process";
 import { promisify } from "util";
@@ -42,13 +44,12 @@ async function getGitDiff(repo, rev) {
       else throw error;
    }
 }
-
 async function main(repos, opts) {
    try {
       const output = opts.output == "-" ? process.stdout : createWriteStream(opts.output, { encoding: "utf8" });
       const model = await LoadLLMModel(opts.model);
 
-      output.write("Fetching diff...\n");
+      process.stderr.write("[STATUS] Fetching diff...\n");
       let Diff = "";
       for (const repo of repos)
          Diff += (await getGitDiff(repo, opts.revision)) + "\n";
@@ -57,14 +58,16 @@ async function main(repos, opts) {
          throw new Error("No changes to review.");
       }
       const agent = new Agent(model, await Agent.LoadDefaultPersonality("Reviewer"));
-      agent.status = (str) => console.log(`STATUS ${str}`);
+      agent.status = (s) => process.stderr.write(`[STATUS] ${s}\n`); 
       const stream = agent.Task(`Review the following code diff: \n\n${Diff}`);
 
-      output.write(`Connecting to ${opts.model}...\n`);
-      stream.pipe(output);
-      stream.on("end", () => {
-         output.write(`\n\nUSD ${agent.cost}\n`);
-      });
+      process.stderr.write(`[STATUS] Connecting to ${opts.model}...\n`);
+     const appendCost = new Transform({
+       transform(chunk,encoding,cb) { cb(null,chunk); },
+       flush(cb) { this.push(`\n\nUSD ${agent.cost}\n`); cb(); }
+     });
+     await pipeline(stream, appendCost, output, {end:false});
+     if (output != process.stdout) output.end();
    } catch (error) {
       console.error(error);
       process.exit(1);
