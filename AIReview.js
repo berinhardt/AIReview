@@ -57,12 +57,13 @@ async function main(repos, opts) {
          throw new Error("No changes to review.");
       }
       const agent = new Agent(model, await Agent.LoadDefaultPersonality("Reviewer"));
+      agent.status = (str) => console.log(`STATUS ${str}`);
       const stream = agent.Task(`Review the following code diff: \n\n${Diff}`);
 
       output.write(`Connecting to ${opts.model}...\n`);
       stream.pipe(output);
       stream.on("end", () => {
-         output.write(`\n\nUSD ${agent.cost}`);
+         output.write(`\n\nUSD ${agent.cost}\n`);
       });
    } catch (error) {
       console.error(error);

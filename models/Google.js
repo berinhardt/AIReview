@@ -1,7 +1,19 @@
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
-import { EventEmitter } from "events";
+import { Readable } from "stream";
 function GeminiLLMRequest(model, SystemPrompt, Input, config = {}) {
-   const emitter = new EventEmitter();
+   const abortContext = {
+      id: null
+   };
+   const stream = new Readable({
+      read() {},
+      async destroy(err, cb) {
+         if (abortContext.id !== null) {
+            this.emit("status", "Aborting...");
+            await GeminiAbort(abortContext.id);
+         }
+         cb(err);
+      }
+   });
    (async () => {
       try {
          if (model.context && SystemPrompt.length + Input.length >= model.context * 4) {
@@ -30,35 +42,46 @@ function GeminiLLMRequest(model, SystemPrompt, Input, config = {}) {
                thinking_level: thinking_level
             },
          });
-
+         let last_step = "";
          for await (const data of interaction) {
-            emitter.emit("raw", data);
+            stream.emit("raw", data);
             switch (data.event_type) {
                case 'interaction.created':
-                  emitter.emit("created", data.interaction.id, data.interaction.status);
+                  abortContext.id = data.interaction.id;
+                  stream.emit("created", data.interaction.id);
+                  stream.emit("status", data.interaction.status)
                   break;
                case 'interaction.status_update':
-                  emitter.emit("status", data.interaction_id, data.status);
+                  stream.emit("status", data.status);
                   break;
                case 'step.start':
-                  emitter.emit("new_step", data.index, data.step.type);
+                  stream.emit("new_step", data.index, data.step.type);
+                  stream.emit("status", data.step.type);
+                  last_step = data.step.type;
                   break;
                case 'step.delta':
-                  emitter.emit("update_" + data.delta.type, data.index, data.delta);
+                  stream.emit("update_" + data.delta.type, data.index, data.delta);
+                  if (last_step == 'model_output' && data.delta.type == 'text') 
+                     stream.push(data.delta.text);
                   break;
                case 'step.stop':
-                  emitter.emit("end_step", data.index);
+                  if (last_step == 'model_output') stream.push("\n");
+                  stream.emit("end_step", data.index);
+                  stream.emit("status", `${last_step} done`);
+                  last_step = "";
                   break;
                case 'interaction.completed':
-                  emitter.emit("completed", data.interaction.id, calculateCosts(model, data.interaction.usage));
+                  abortContext.id = null;
+                  stream.emit("complete", calculateCosts(model, data.interaction.usage));
+                  stream.push(null);
                   break;
             };
          }
       } catch (err) {
-         emitter.emit("error", err);
+         stream.emit("error", err);
       }
    })();
-   return emitter;
+   return stream;
 }
 async function GeminiAbort(id) {
    const APIKEY = process.env.GEMINI_API_KEY;
