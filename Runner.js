@@ -33,7 +33,8 @@ async function main(opts) {
    const LOGFILE = createWriteStream(opts.logfile);
    try {
       const model = await LoadLLMModel(opts.model);
-      const personality = opts.personality ? await readFile(opts.personality) : await Agent.LoadDefaultPersonality('Default');
+      let personality = opts.personality ? await readFile(opts.personality) : await Agent.LoadDefaultPersonality('Default');
+      personality += `\n\nUNIDIF FORMAT ===\n${Agent.LoadDefaultPersonality("Unidiff.md")}\n/UNIDIF FORMAT ===\n`;
       const agent = new Agent(model, personality, opts.chroot);
 
       agent.addTools([CreateFile, ReadFile, ModifyFile]);
