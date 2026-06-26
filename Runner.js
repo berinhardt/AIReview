@@ -17,7 +17,7 @@ program.version("0.2.0")
    .option('-d, --chroot <dir>', 'Exposed root of paths to AI', "sandbox")
    .option('-o, --output <output>', 'Output file', '-')
    .option('-l, --logfile <logfile>', 'Agent log file', 'last.log')
-   .option('--max-retry-timeout <timeout>', 'Max retry timeout in seconds', validateNonNegativeInteger, 300)
+   .option('--max-retry-timeout <timeout>', 'Max retry timeout in seconds', (val) => validateNonNegativeInteger(val, 0), 300)
    .action(main)
    .parse(process.argv);
 

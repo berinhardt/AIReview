@@ -96,10 +96,11 @@ export function isTransientError(error) {
     return false;
 }
 
-export function validateNonNegativeInteger(value) {
+export function validateNonNegativeInteger(value, defaultValue) {
     const parsed = parseInt(value, 10);
     if (isNaN(parsed) || parsed < 0) {
-        return 0;
+        console.error(`Invalid non-negative integer provided: "${value}". Defaulting to ${defaultValue}.`);
+        return defaultValue;
     }
     return parsed;
 }
