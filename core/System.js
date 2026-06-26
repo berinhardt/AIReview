@@ -3,16 +3,16 @@ import { fileURLToPath } from "url";
 import fs, { access, constants, mkdir, readdir, realpath } from "fs/promises";
 
 export async function acquireLock(lockPath) {
-  try {
-    await mkdir(lockPath);
-    return true;
-  } catch (error) {
-    return false;
-  }
+   try {
+      await mkdir(lockPath);
+      return true;
+   } catch (error) {
+      return false;
+   }
 }
 
 export async function releaseLock(lockPath) {
-  await fs.rm(lockPath, { recursive: true });
+   await fs.rm(lockPath, { recursive: true });
 }
 
 export function Dirname(meta_url) {
@@ -58,15 +58,11 @@ export async function LoadLLMModel(model) {
    return rval;
 }
 
-export function isTransientError(error) {
-    return true;
-}
-
 export function validateNonNegativeInteger(value, defaultValue) {
-    const parsed = parseInt(value, 10);
-    if (isNaN(parsed) || parsed < 0) {
-        console.error(`Invalid non-negative integer provided: "${value}". Defaulting to ${defaultValue}.`);
-        return defaultValue;
-    }
-    return parsed;
+   const parsed = parseInt(value, 10);
+   if (isNaN(parsed) || parsed < 0) {
+      console.error(`Invalid non-negative integer provided: "${value}". Defaulting to ${defaultValue}.`);
+      return defaultValue;
+   }
+   return parsed;
 }

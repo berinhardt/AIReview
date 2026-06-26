@@ -56,8 +56,8 @@ async function main(opts) {
          return cachedStdin;
       };
 
-      try {
-         for (const task of tasks) {
+      for (const task of tasks) {
+         try {
             if (task !== "-") {
                const taskContent = await readFile(task, "utf8");
                await executeTask(agent, taskContent, output);
@@ -95,10 +95,11 @@ async function main(opts) {
                   rl.close();
                }
             }
+         } catch (error) {
+            agent.__STATUS(`Error executing task ${task}: ${error.message}`);
          }
-      } finally {
-         if (output != process.stdout && !output.closed) output.end();
       }
+      if (output != process.stdout && !output.closed) output.end();
    } catch (error) {
       console.error(error);
       process.exit(1);
