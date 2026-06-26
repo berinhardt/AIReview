@@ -45,32 +45,6 @@ CreateFile.TOOLDEF = {
     required: ['filename', 'content']
   }
 }
-export async function ModifyFile({ filename, diffStr }, ENV) {
-  try {
-    console.log("modify", diffStr);
-    const targetPath = await SanitizePath(filename, ENV.cwd);
-    const original = await fs.readFile(targetPath, "utf8");
-    const result = applyPatch(original, diffStr);
-    if (result === false) throw new Error("Invalid Diff: source does not match hunks");
-    await fs.writeFile(targetPath, result, "utf8");
-    return { result: "Success" };
-  } catch (error) {
-    return { result: "Failure", error: error.message };
-  }
-}
-ModifyFile.TOOLDEF = {
-  type: 'function',
-  name: 'FileTools_ModifyFile',
-  description: 'Modify a local file.',
-  parameters: {
-    type: 'object',
-    properties: {
-      filename: { type: 'string', description: 'Relative path of the file (ej: "src/index.html").' },
-      diffStr: { type: 'string', description: 'Diff of the file changes in unidiff format.' }
-    },
-    required: ['filename', 'diffStr']
-  }
-}
 export async function SearchReplaceFile({ filename, search, replace }, ENV) {
   try {
     const targetPath = await SanitizePath(filename, ENV.cwd);

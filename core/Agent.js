@@ -47,7 +47,7 @@ export class Agent {
       queue.push((async () => {
         let response = {
           type: 'function_result',
-          name: data.name,
+          //          name: data.name,
           call_id: data.call_id,
           result: [{ type: 'text', text: null }]
         };

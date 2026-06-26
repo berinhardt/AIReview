@@ -98,7 +98,16 @@ const DeltaHandlerStore = {
       param: []
     },
     parse(delta) { delta.type == "arguments_delta" && this.data.param.push(delta.arguments); },
-    end() { this.data.param = JSON.parse(this.data.param.join("")); stream.emit("call_tool", this.data); }
+    end() {
+      const rawArgs = this.data.param.join("");
+      try {
+        this.data.param = rawArgs ? JSON.parse(rawArgs) : {};
+      } catch (e) {
+        this.data.name = "RESERVED_Echo";
+        this.data.param = { error: "Error parsing arguments. Invalid JSON Received" };
+      }
+      stream.emit("call_tool", this.data);
+    }
   })
 }
 
