@@ -2,7 +2,7 @@ import "dotenv/config";
 import { readFile } from "fs/promises";
 import readline from 'readline/promises';
 import { program } from 'commander';
-import { LoadLLMModel, isTransientError } from './core/System.js';
+import { LoadLLMModel, isTransientError, validateNonNegativeInteger } from './core/System.js';
 import { Agent } from './core/Agent.js'
 import { text } from "stream/consumers";
 import { createWriteStream } from "fs";
@@ -17,7 +17,7 @@ program.version("0.2.0")
    .option('-d, --chroot <dir>', 'Exposed root of paths to AI', "sandbox")
    .option('-o, --output <output>', 'Output file', '-')
    .option('-l, --logfile <logfile>', 'Agent log file', 'last.log')
-   .option('--max-retry-timeout <timeout>', 'Max retry timeout in seconds', parseInt, 300)
+   .option('--max-retry-timeout <timeout>', 'Max retry timeout in seconds', validateNonNegativeInteger, 300)
    .action(main)
    .parse(process.argv);
 
