@@ -42,6 +42,7 @@ function GeminiLLMRequest(model, SystemPrompt, Input, config = {}) {
           thinking_level: thinking_level
         },
       }
+      stream.emit("request", request);
       console.log("PreviousInteractionID", request.previous_interaction_id);
       const interaction = await client.interactions.create(request);
       let DeltaHandler = null;
@@ -77,6 +78,9 @@ function GeminiLLMRequest(model, SystemPrompt, Input, config = {}) {
             abortContext.id = null;
             stream.emit("complete", calculateCosts(model, data.interaction.usage));
             stream.push(null);
+            break;
+          case 'error':
+            throw new Error(data.error.message);
             break;
         };
       }

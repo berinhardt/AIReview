@@ -37,6 +37,10 @@ export class Agent {
     result.on("status", (status) => {
       myAgent.__STATUS(status);
     })
+    result.on("raw", (status) => {
+      myAgent.__LOG(status);
+    })
+    result.on("request", (r) => myAgent.__LOG("Request", r));
     result.on("complete", (cost) => {
       myAgent.__STATUS("Interaction Complete");
       myAgent.cost += cost;
@@ -47,7 +51,7 @@ export class Agent {
       queue.push((async () => {
         let response = {
           type: 'function_result',
-          //          name: data.name,
+          name: data.name,
           call_id: data.call_id,
           result: [{ type: 'text', text: null }]
         };
