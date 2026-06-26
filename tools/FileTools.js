@@ -1,6 +1,7 @@
 import fs from "fs/promises"
 import path from "path"
-import { SanitizePath } from "../core/System.js";
+import { SanitizePath, acquireLock, releaseLock } from "../core/System.js";
+
 export async function ReadFile({ filename }, ENV) {
   try {
     const targetPath = await SanitizePath(filename, ENV.cwd);
@@ -46,8 +47,24 @@ CreateFile.TOOLDEF = {
   }
 }
 export async function SearchReplaceOnceFile({ filename, search, replace }, ENV) {
+  const targetPath = await SanitizePath(filename, ENV.cwd);
+  const lockPath = targetPath + ".lock";
+  
+  // Simple retry mechanism for locking
+  let locked = false;
+  for (let i = 0; i < 10; i++) {
+    if (await acquireLock(lockPath)) {
+      locked = true;
+      break;
+    }
+    await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms
+  }
+
+  if (!locked) {
+    return { result: "Failure", error: "Could not acquire file lock" };
+  }
+
   try {
-    const targetPath = await SanitizePath(filename, ENV.cwd);
     const original = await fs.readFile(targetPath, "utf8");
     const normalizedOriginal = original.replace(/\r?\n\r?/g, '\n');
     const normalizedSearch = search.replace(/\r?\n\r?/g, '\n');
@@ -62,6 +79,8 @@ export async function SearchReplaceOnceFile({ filename, search, replace }, ENV) 
     return { result: "Success" };
   } catch (error) {
     return { result: "Failure", error: error.message };
+  } finally {
+    await releaseLock(lockPath);
   }
 }
 SearchReplaceOnceFile.TOOLDEF = {
