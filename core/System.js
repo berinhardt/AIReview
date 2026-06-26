@@ -26,7 +26,8 @@ export async function SanitizePath(filename, chroot) {
    while (true) {
       try {
          const realPath = await realpath(checkPath);
-         if (!realPath.startsWith(cwd)) throw new Error("Permission Denied");
+         const relative = path.relative(cwd, realPath);
+         if (relative.startsWith('..') || path.isAbsolute(relative)) throw new Error("Permission Denied");
          return targetPath;
       } catch (error) {
          if (error.code === 'ENOENT') {
