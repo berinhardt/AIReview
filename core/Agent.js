@@ -82,13 +82,17 @@ export class Agent {
             if (typeof result.destroy === 'function') {
               result.destroy(err);
             }
-            stream.emit("error", err);
-            stream.end();
+            if (!stream.destroyed) {
+              stream.emit("error", err);
+              stream.end();
+            }
           } else {
             setImmediate(() => myAgent.Task(chained, depth + 1, stream));
           }
         } else {
-          stream.end();
+          if (!stream.destroyed) {
+            stream.end();
+          }
         }
       })();
     });
@@ -100,7 +104,9 @@ export class Agent {
     });
     pipeline(result, logpipe, stream, { end: false }).catch((err) => {
       myAgent.__LOG(`Pipeline error: ${err.message}`);
-      stream.emit("error", err);
+      if (!stream.destroyed) {
+        stream.emit("error", err);
+      }
     });
     return stream;
   }
