@@ -2,7 +2,7 @@ import "dotenv/config";
 import { readFile } from "fs/promises";
 import readline from 'readline/promises';
 import { program } from 'commander';
-import { LoadLLMModel, isTransientError, validateNonNegativeInteger } from './core/System.js';
+import { LoadLLMModel, isTransientError, validateNonNegativeInteger, ValidateFile } from './core/System.js';
 import { Agent } from './core/Agent.js'
 import { text } from "stream/consumers";
 import { createWriteStream } from "fs";
@@ -46,7 +46,22 @@ async function main(opts) {
 
       const output = opts.output == "-" ? process.stdout : createWriteStream(opts.output, { encoding: "utf8" });
 
-      const tasks = opts.task.length === 0 ? ['-'] : opts.task;
+      let rawTasks = opts.task.length === 0 ? ['-'] : opts.task;
+      const tasks = [];
+      for (const task of rawTasks) {
+         if (task === "-") {
+            tasks.push(task);
+         } else if (task && task.trim() !== "") {
+            const { valid, error } = await ValidateFile(task);
+            if (valid) {
+               tasks.push(task);
+            } else {
+               agent.__STATUS(`Skipping invalid task '${task}': ${error}`);
+            }
+         } else {
+            agent.__STATUS(`Skipping empty task entry`);
+         }
+      }
 
       let cachedStdin = null;
       const getStdin = async () => {
