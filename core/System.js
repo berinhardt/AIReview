@@ -1,6 +1,6 @@
 import path from "path";
 import { fileURLToPath } from "url";
-import fs, { access, constants, mkdir, readdir, realpath } from "fs/promises";
+import fs, { access, constants, mkdir, readdir, realpath, stat } from "fs/promises";
 
 export async function acquireLock(lockPath) {
    try {
@@ -40,6 +40,20 @@ export async function SanitizePath(filename, chroot) {
       }
    }
 }
+
+export async function ValidateFile(filePath) {
+   try {
+      await access(filePath, constants.R_OK);
+      const stats = await stat(filePath);
+      if (!stats.isFile()) {
+         return { valid: false, error: "Path is not a file" };
+      }
+      return { valid: true };
+   } catch (error) {
+      return { valid: false, error: error.message };
+   }
+}
+
 export async function LoadLLMModel(model) {
    const __dirname = path.join(Dirname(import.meta.url), "..");
 
