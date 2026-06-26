@@ -30,8 +30,9 @@ async function executeTask(agent, task, output) {
   return await pipeline(stream, appendCost, output, { end: false });
 }
 async function main(opts) {
-  const LOGFILE = createWriteStream(opts.logfile);
+  let LOGFILE;
   try {
+    LOGFILE = createWriteStream(opts.logfile);
     const model = await LoadLLMModel(opts.model);
     const personality = opts.personality ? await readFile(opts.personality, "utf8") : await Agent.LoadDefaultPersonality('Default');
     const agent = new Agent(model, personality, opts.chroot);
@@ -83,6 +84,6 @@ async function main(opts) {
     console.error(error);
     process.exit(1);
   } finally {
-    LOGFILE.end();
+    if (LOGFILE) LOGFILE.end();
   }
 }
