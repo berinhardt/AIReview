@@ -1,7 +1,8 @@
 import { Dirname } from "./System.js";
 import { readFile } from "fs/promises";
 import path from "path";
-import { PassThrough, Transform, pipeline } from "stream";
+import { PassThrough, Transform } from "stream";
+import { pipeline } from "stream/promises";
 import { AgentToolkit } from "./AgentToolkit.js";
 export class Agent {
   constructor(llm, personality, chroot = "", maxRecursionDepth = 100) {
@@ -91,11 +92,9 @@ export class Agent {
         cb(null, chunk);
       }
     });
-    pipeline(result, logpipe, stream, { end: false }, (err) => {
-      if (err) {
-        myAgent.__LOG(`Pipeline error: ${err.message}`);
-        stream.emit("error", err);
-      }
+    pipeline(result, logpipe, stream, { end: false }).catch((err) => {
+      myAgent.__LOG(`Pipeline error: ${err.message}`);
+      stream.emit("error", err);
     });
     return stream;
   }
