@@ -81,9 +81,12 @@ async function main(opts) {
       const tasks = opts.task.length === 0 ? ['-'] : opts.task;
 
       let cachedStdin = null;
-      if (!process.stdin.isTTY && tasks.includes('-')) {
-         cachedStdin = await text(process.stdin);
-      }
+      const getStdin = async () => {
+         if (cachedStdin === null) {
+            cachedStdin = await text(process.stdin);
+         }
+         return cachedStdin;
+      };
 
       try {
          for (const task of tasks) {
@@ -91,7 +94,8 @@ async function main(opts) {
                const taskContent = await readFile(task, "utf8");
                await runTaskWithRetry(agent, taskContent, output, opts.maxRetryTimeout);
             } else if (!process.stdin.isTTY) {
-               await runTaskWithRetry(agent, cachedStdin, output, opts.maxRetryTimeout);
+               const stdinContent = await getStdin();
+               await runTaskWithRetry(agent, stdinContent, output, opts.maxRetryTimeout);
             } else {
                // Interactive mode
                const rl = readline.createInterface({
