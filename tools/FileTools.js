@@ -45,7 +45,7 @@ CreateFile.TOOLDEF = {
     required: ['filename', 'content']
   }
 }
-export async function SearchReplaceOnceFile({ filename, search, replace }, ENV) {
+export async function SearchReplaceFile({ filename, search, replace }, ENV) {
   try {
     const targetPath = await SanitizePath(filename, ENV.cwd);
     const original = await fs.readFile(targetPath, "utf8");
@@ -64,9 +64,9 @@ export async function SearchReplaceOnceFile({ filename, search, replace }, ENV) 
     return { result: "Failure", error: error.message };
   }
 }
-SearchReplaceOnceFile.TOOLDEF = {
+SearchReplaceFile.TOOLDEF = {
   type: 'function',
-  name: 'FileTools_SearchReplaceOnceFile',
+  name: 'FileTools_SearchReplaceFile',
   description: 'Perform a search and replace on a local file.',
   parameters: {
     type: 'object',
