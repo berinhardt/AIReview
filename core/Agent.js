@@ -1,8 +1,7 @@
 import { Dirname } from "./System.js";
 import { readFile } from "fs/promises";
 import path from "path";
-import { PassThrough, Transform } from "stream";
-import { pipeline } from "stream/promises";
+import { PassThrough, Transform, pipeline } from "stream";
 import { AgentToolkit } from "./AgentToolkit.js";
 export class Agent {
   constructor(llm, personality, chroot = "", maxRecursionDepth = 100) {
@@ -13,14 +12,13 @@ export class Agent {
     this.logger = null;
     this.status = null;
     this.tools = new AgentToolkit(chroot);
-    this.output = null;
     this.maxRecursionDepth = maxRecursionDepth;
   }
   addTools(ary) {
     for (const t of ary) this.tools.add(t);
   }
-  Task(input, depth = 0) {
-    if (this.output == null) this.output = new PassThrough();
+  Task(input, depth = 0, outputStream = null) {
+    const stream = outputStream || new PassThrough();
     const myAgent = this;
     myAgent.__STATUS(`Queueing TASK (depth: ${depth})`);
     const result = myAgent.llm(myAgent.personality, input, {
@@ -77,15 +75,13 @@ export class Agent {
           const chained = await Promise.all(queue);
           if (depth + 1 >= myAgent.maxRecursionDepth) {
             myAgent.__LOG("Max recursion depth reached. Stopping.");
-            myAgent.output.emit("error", new Error("Max recursion depth reached"));
-            myAgent.output.end();
-            myAgent.output = null;
+            stream.emit("error", new Error("Max recursion depth reached"));
+            stream.end();
           } else {
-            setImmediate(() => myAgent.Task(chained, depth + 1));
+            setImmediate(() => myAgent.Task(chained, depth + 1, stream));
           }
         } else {
-          myAgent.output.end();
-          myAgent.output = null;
+          stream.end();
         }
       })();
     });
@@ -95,8 +91,13 @@ export class Agent {
         cb(null, chunk);
       }
     });
-    pipeline(result, logpipe, this.output, { end: false });
-    return this.output;
+    pipeline(result, logpipe, stream, { end: false }, (err) => {
+      if (err) {
+        myAgent.__LOG(`Pipeline error: ${err.message}`);
+        stream.emit("error", err);
+      }
+    });
+    return stream;
   }
   __STATUS(str) {
     if (typeof this.status === "function") this.status(str);
