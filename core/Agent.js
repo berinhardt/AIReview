@@ -5,23 +5,24 @@ import { PassThrough, Transform } from "stream";
 import { pipeline } from "stream/promises";
 import { AgentToolkit } from "./AgentToolkit.js";
 export class Agent {
-  constructor(llm, personality, chroot) {
+  constructor(llm, personality, chroot = "", maxRecursionDepth = 100) {
     this.llm = llm;
     this.personality = personality;
     this.cost = 0;
     this.id = null;
     this.logger = null;
     this.status = null;
-    this.tools = new AgentToolkit(chroot || "");
+    this.tools = new AgentToolkit(chroot);
     this.output = null;
+    this.maxRecursionDepth = maxRecursionDepth;
   }
   addTools(ary) {
     for (const t of ary) this.tools.add(t);
   }
-  Task(input) {
+  Task(input, depth = 0) {
     if (this.output == null) this.output = new PassThrough();
     const myAgent = this;
-    myAgent.__STATUS("Queueing TASK");
+    myAgent.__STATUS(`Queueing TASK (depth: ${depth})`);
     const result = myAgent.llm(myAgent.personality, input, {
       ...(myAgent.id !== null && { previous_interaction_id: myAgent.id }),
       tools: myAgent.tools.list()
@@ -70,8 +71,14 @@ export class Agent {
       (async () => {
         if (queue.length > 0) {
           const chained = await Promise.all(queue);
-          console.log(chained);
-          setImmediate(() => myAgent.Task(chained));
+          if (depth + 1 >= myAgent.maxRecursionDepth) {
+            myAgent.__LOG("Max recursion depth reached. Stopping.");
+            myAgent.output.emit("error", new Error("Max recursion depth reached"));
+            myAgent.output.end();
+            myAgent.output = null;
+          } else {
+            setImmediate(() => myAgent.Task(chained, depth + 1));
+          }
         } else {
           myAgent.output.end();
           myAgent.output = null;
