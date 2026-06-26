@@ -54,6 +54,7 @@ export async function SearchReplaceFile({ filename, search, replace }, ENV) {
     const normalizedReplace = replace.replace(/\r?\n\r?/g, '\n');
     const startIndex = normalizedOriginal.indexOf(normalizedSearch);
     if (startIndex === -1) throw new Error("Search string not found on file");
+    //AVOID REPLACING WHERE THERE ARE MORE THAN ONE CANDIDATE
     if (startIndex !== normalizedOriginal.lastIndexOf(normalizedSearch)) throw new Error("Multiple matches, increase context and try again");
     const result = normalizedOriginal.substring(0, startIndex)
       + normalizedReplace
