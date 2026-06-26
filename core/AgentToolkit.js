@@ -2,10 +2,7 @@ import path from "path";
 export class AgentToolkit {
   constructor(chroot) {
     this.tools = [];
-    this.map = {
-      RESERVED_Echo: async (v) => v,
-      RESERVED_Noop: async () => { }
-    };
+    this.map = {};
     this.ENV = {
       cwd: path.resolve(chroot)
     };

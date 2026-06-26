@@ -106,11 +106,10 @@ const DeltaHandlerStore = {
       const rawArgs = this.data.param.join("");
       try {
         this.data.param = rawArgs ? JSON.parse(rawArgs) : {};
+        stream.emit("call_tool", this.data);
       } catch (e) {
-        this.data.name = "RESERVED_Echo";
-        this.data.param = { error: "Error parsing arguments. Invalid JSON Received" };
+        stream.emit("error", "Invalid JSON received");
       }
-      stream.emit("call_tool", this.data);
     }
   })
 }
