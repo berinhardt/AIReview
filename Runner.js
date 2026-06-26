@@ -17,40 +17,8 @@ program.version("0.2.0")
    .option('-d, --chroot <dir>', 'Exposed root of paths to AI', "sandbox")
    .option('-o, --output <output>', 'Output file', '-')
    .option('-l, --logfile <logfile>', 'Agent log file', 'last.log')
-   .option('--max-retry-timeout <timeout>', 'Max retry timeout in seconds', (val) => validateNonNegativeInteger(val, 0), 300)
    .action(main)
    .parse(process.argv);
-
-async function runTaskWithRetry(agent, taskContent, output, maxRetryTimeout) {
-   let attempt = 0;
-   let totalDelay = 0;
-
-   while (true) {
-      try {
-         await executeTask(agent, taskContent, output);
-         return; // Success
-      } catch (error) {
-         if (!isTransientError(error)) {
-            process.stderr.write(`[ERROR] Permanent error encountered: ${error.message}. Skipping.\n`);
-            agent.__LOG(`[ERROR] Permanent error encountered: ${error.message}. Skipping.\n`);
-            return; // Skip
-         }
-
-         attempt++;
-         const delay = Math.pow(2, attempt - 1) * 1000; // 1s, 2s, 4s...
-
-         if (totalDelay + delay > maxRetryTimeout * 1000) {
-            process.stderr.write(`[ERROR] Task failed after ${attempt} attempts. Max retry timeout exceeded. Skipping.\n`);
-            agent.__LOG(`[ERROR] Task failed after ${attempt} attempts. Max retry timeout exceeded. Skipping. Error: ${error.message}\n`);
-            return; // Skip
-         }
-
-         agent.__STATUS(`Task failed (transient error: ${error.message}). Retrying in ${delay / 1000}s (Attempt ${attempt})...`);
-         await new Promise(resolve => setTimeout(resolve, delay));
-         totalDelay += delay;
-      }
-   }
-}
 
 async function executeTask(agent, task, output) {
    if (!task) return;
@@ -92,10 +60,10 @@ async function main(opts) {
          for (const task of tasks) {
             if (task !== "-") {
                const taskContent = await readFile(task, "utf8");
-               await runTaskWithRetry(agent, taskContent, output, opts.maxRetryTimeout);
+               await executeTask(agent, taskContent, output);
             } else if (!process.stdin.isTTY) {
                const stdinContent = await getStdin();
-               await runTaskWithRetry(agent, stdinContent, output, opts.maxRetryTimeout);
+               await executeTask(agent, stdinContent, output);
             } else {
                // Interactive mode
                const rl = readline.createInterface({
@@ -111,7 +79,7 @@ async function main(opts) {
                         if (++nlacc == 2) {
                            lines.pop();
                            if (lines.length > 0) {
-                              await runTaskWithRetry(agent, lines.join("\n"), output, opts.maxRetryTimeout);
+                              await executeTask(agent, lines.join("\n"), output);
                               lines = [];
                               nlacc = 0;
                               console.log("\nPROMPT> ");
