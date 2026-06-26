@@ -50,14 +50,19 @@ export async function SearchReplaceFile({ filename, search, replace }, ENV) {
   const targetPath = await SanitizePath(filename, ENV.cwd);
   const lockPath = targetPath + ".lock";
 
-  // Simple retry mechanism for locking
+  // Improved retry mechanism with exponential backoff
   let locked = false;
-  for (let i = 0; i < 10; i++) {
+  let delay = 50; // Start with 50ms
+  const maxDelay = 1000; // Max 1s
+  const maxRetries = 20; // Increased retries
+
+  for (let i = 0; i < maxRetries; i++) {
     if (await acquireLock(lockPath)) {
       locked = true;
       break;
     }
-    await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms
+    await new Promise(resolve => setTimeout(resolve, delay));
+    delay = Math.min(delay * 2, maxDelay); // Exponential backoff
   }
 
   if (!locked) {
