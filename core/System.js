@@ -1,10 +1,11 @@
 import path from "path";
 import { fileURLToPath } from "url";
-import { access, constants, readdir, realpath } from "fs/promises";
+import { access, constants, mkdir, readdir, realpath } from "fs/promises";
 export function Dirname(meta_url) {
    return path.dirname(fileURLToPath(meta_url));
 }
 export async function SanitizePath(filename, chroot) {
+   await mkdir(chroot, { recursive: true });
    const cwd = await realpath(chroot);
    let targetPath = path.resolve(cwd, filename);
    let checkPath = targetPath;
