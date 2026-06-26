@@ -7,7 +7,7 @@ import { Agent } from './core/Agent.js'
 import { text } from "stream/consumers";
 import { createWriteStream } from "fs";
 import { pipeline } from "stream/promises";
-import { Transform, Writable, Readable } from "stream";
+import { Transform } from "stream";
 import { CreateFile, SearchReplaceFile, ReadFile } from "./tools/FileTools.js";
 
 program.version("0.2.0")
