@@ -2,7 +2,7 @@ import "dotenv/config";
 import { readFile } from "fs/promises";
 import readline from 'readline/promises';
 import { program } from 'commander';
-import { LoadLLMModel, isTransientError, validateNonNegativeInteger, ValidateFile } from './core/System.js';
+import { LoadLLMModel, ValidateFile } from './core/System.js';
 import { Agent } from './core/Agent.js'
 import { text } from "stream/consumers";
 import { createWriteStream } from "fs";
