@@ -1,12 +1,10 @@
 import fs from "fs/promises"
 import path from "path"
-import { SanitizePath, acquireLock, releaseLock, ValidateFile } from "../core/System.js";
+import { SanitizePath, acquireLock, releaseLock } from "../core/System.js";
 
 export async function ReadFile({ filename }, ENV) {
    try {
       const targetPath = await SanitizePath(filename, ENV.cwd);
-      const validation = await ValidateFile(targetPath);
-      if (!validation.valid) throw new Error(validation.error)
       const data = await fs.readFile(targetPath, "utf-8");
       return { content: data };
    } catch (error) {
