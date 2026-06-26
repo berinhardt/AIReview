@@ -57,3 +57,41 @@ export async function LoadLLMModel(model) {
    }
    return rval;
 }
+
+export function isTransientError(error) {
+    // List of transient error codes/types
+    const transientCodes = [
+        'ETIMEDOUT',
+        'ECONNRESET',
+        'ECONNREFUSED',
+        'EADDRINUSE',
+        'EPIPE',
+        'ENOTFOUND', // DNS issues can be transient
+    ];
+
+    // Check for error code
+    if (error.code && transientCodes.includes(error.code)) {
+        return true;
+    }
+
+    // Check for HTTP status codes (if available)
+    if (error.status) {
+        const transientStatuses = [408, 429, 500, 502, 503, 504];
+        if (transientStatuses.includes(error.status)) {
+            return true;
+        }
+    }
+
+    // Check for common transient error messages
+    const transientMessages = [
+        'timeout',
+        'rate limit',
+        'service unavailable',
+        'connection reset',
+    ];
+    if (error.message && transientMessages.some(msg => error.message.toLowerCase().includes(msg))) {
+        return true;
+    }
+
+    return false;
+}

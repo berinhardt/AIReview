@@ -2,7 +2,7 @@ import "dotenv/config";
 import { readFile } from "fs/promises";
 import readline from 'readline/promises';
 import { program } from 'commander';
-import { LoadLLMModel } from './core/System.js';
+import { LoadLLMModel, isTransientError } from './core/System.js';
 import { Agent } from './core/Agent.js'
 import { text } from "stream/consumers";
 import { createWriteStream } from "fs";
@@ -30,6 +30,12 @@ async function runTaskWithRetry(agent, taskContent, output, maxRetryTimeout) {
          await executeTask(agent, taskContent, output);
          return; // Success
       } catch (error) {
+         if (!isTransientError(error)) {
+            process.stderr.write(`[ERROR] Permanent error encountered: ${error.message}. Skipping.\n`);
+            agent.__LOG(`[ERROR] Permanent error encountered: ${error.message}. Skipping.\n`);
+            return; // Skip
+         }
+
          attempt++;
          const delay = Math.pow(2, attempt - 1) * 1000; // 1s, 2s, 4s...
 
@@ -39,7 +45,7 @@ async function runTaskWithRetry(agent, taskContent, output, maxRetryTimeout) {
             return; // Skip
          }
 
-         agent.__STATUS(`Task failed. Retrying in ${delay / 1000}s (Attempt ${attempt})...`);
+         agent.__STATUS(`Task failed (transient error: ${error.message}). Retrying in ${delay / 1000}s (Attempt ${attempt})...`);
          await new Promise(resolve => setTimeout(resolve, delay));
          totalDelay += delay;
       }
