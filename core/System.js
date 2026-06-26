@@ -1,6 +1,20 @@
 import path from "path";
 import { fileURLToPath } from "url";
-import { access, constants, mkdir, readdir, realpath } from "fs/promises";
+import fs, { access, constants, mkdir, readdir, realpath } from "fs/promises";
+
+export async function acquireLock(lockPath) {
+  try {
+    await mkdir(lockPath);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+export async function releaseLock(lockPath) {
+  await fs.rm(lockPath, { recursive: true });
+}
+
 export function Dirname(meta_url) {
    return path.dirname(fileURLToPath(meta_url));
 }

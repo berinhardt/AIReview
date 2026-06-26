@@ -77,7 +77,12 @@ export class Agent {
           }
           if (depth + 1 >= myAgent.maxRecursionDepth) {
             myAgent.__LOG("Max recursion depth reached. Stopping.");
-            stream.emit("error", new Error("Max recursion depth reached"));
+            const err = new Error("Max recursion depth reached");
+            // Explicitly destroy the result stream to abort the LLM interaction
+            if (typeof result.destroy === 'function') {
+              result.destroy(err);
+            }
+            stream.emit("error", err);
             stream.end();
           } else {
             setImmediate(() => myAgent.Task(chained, depth + 1, stream));
