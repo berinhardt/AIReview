@@ -46,10 +46,10 @@ CreateFile.TOOLDEF = {
     required: ['filename', 'content']
   }
 }
-export async function SearchReplaceOnceFile({ filename, search, replace }, ENV) {
+export async function SearchReplaceFile({ filename, search, replace }, ENV) {
   const targetPath = await SanitizePath(filename, ENV.cwd);
   const lockPath = targetPath + ".lock";
-  
+
   // Simple retry mechanism for locking
   let locked = false;
   for (let i = 0; i < 10; i++) {
