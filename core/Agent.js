@@ -45,26 +45,10 @@ export class Agent {
       myAgent.__STATUS("Interaction Complete");
       myAgent.cost += cost;
     });
-    result.on("call_tool", async (data) => {
+    result.on("call_tool", (data) => {
       myAgent.__STATUS(`Calling ${data.name}`)
       myAgent.__LOG(`=== PARAMS ${data.call_id}\n${JSON.stringify(data.param)}\n===\n`);
-      queue.push((async () => {
-        let response = {
-          type: 'function_result',
-          name: data.name,
-          call_id: data.call_id,
-          result: [{ type: 'text', text: null }]
-        };
-        try {
-          let t = await myAgent.tools.call(data.name, data.param);
-          response.result = t;
-        } catch (error) {
-          response.result = { error: error.message };
-          response.is_error = true;
-        }
-        myAgent.__LOG(`=== RESULT ${data.call_id}\n${JSON.stringify(response)}\n===\n`);
-        return response;
-      })());
+      queue.push(data);
     });
     result.on("error", (error) => {
       myAgent.__LOG(error);
@@ -73,7 +57,24 @@ export class Agent {
       result.removeAllListeners();
       (async () => {
         if (queue.length > 0) {
-          const chained = await Promise.all(queue);
+          const chained = [];
+          for (const data of queue) {
+            let response = {
+              type: 'function_result',
+              name: data.name,
+              call_id: data.call_id,
+              result: [{ type: 'text', text: null }]
+            };
+            try {
+              let t = await myAgent.tools.call(data.name, data.param);
+              response.result = t;
+            } catch (error) {
+              response.result = { error: error.message };
+              response.is_error = true;
+            }
+            myAgent.__LOG(`=== RESULT ${data.call_id}\n${JSON.stringify(response)}\n===\n`);
+            chained.push(response);
+          }
           if (depth + 1 >= myAgent.maxRecursionDepth) {
             myAgent.__LOG("Max recursion depth reached. Stopping.");
             stream.emit("error", new Error("Max recursion depth reached"));
