@@ -9,6 +9,7 @@ import path from "path";
 import { Dirname, LoadLLMModel } from './core/System.js';
 import { Agent } from './core/Agent.js'
 import { createWriteStream } from "fs";
+import { ReadFile } from "./tools/FileTools.js";
 
 const execAsync = promisify(execFile);
 
@@ -56,7 +57,8 @@ async function main(repos, opts) {
       if (!Diff) {
          throw new Error("No changes to review.");
       }
-      const agent = new Agent(model, await Agent.LoadDefaultPersonality("Reviewer"));
+      const agent = new Agent(model, await Agent.LoadDefaultPersonality("Reviewer"), "sandbox");
+      agent.addTools([ReadFile]);
       agent.status = (s) => process.stderr.write(`[STATUS] ${s}\n`);
       const stream = agent.Task(`Review the following code diff: \n\n${Diff}`);
 
