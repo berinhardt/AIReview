@@ -8,7 +8,7 @@ import { text } from "stream/consumers";
 import { createWriteStream } from "fs";
 import { pipeline } from "stream/promises";
 import { Transform } from "stream";
-import { CreateFile, SearchReplaceFile, ReadFile } from "./tools/FileTools.js";
+import { CreateFile, SearchReplaceOnceFile, ReadFile } from "./tools/FileTools.js";
 
 program.version("0.2.0")
   .option('-p, --personality <personality>', 'AI personality file', null)
@@ -36,7 +36,7 @@ async function main(opts) {
     const personality = opts.personality ? await readFile(opts.personality, "utf8") : await Agent.LoadDefaultPersonality('Default');
     const agent = new Agent(model, personality, opts.chroot);
 
-    agent.addTools([CreateFile, ReadFile, SearchReplaceFile]);
+    agent.addTools([CreateFile, ReadFile, SearchReplaceOnceFile]);
     agent.status = (str) => process.stderr.write(`[STATUS] ${str}\n`);
     agent.logger = (str) => LOGFILE.write(str);
 

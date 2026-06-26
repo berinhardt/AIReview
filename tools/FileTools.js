@@ -45,7 +45,7 @@ CreateFile.TOOLDEF = {
     required: ['filename', 'content']
   }
 }
-export async function SearchReplaceFile({ filename, search, replace }, ENV) {
+export async function SearchReplaceOnceFile({ filename, search, replace }, ENV) {
   try {
     const targetPath = await SanitizePath(filename, ENV.cwd);
     const original = await fs.readFile(targetPath, "utf8");
@@ -54,7 +54,6 @@ export async function SearchReplaceFile({ filename, search, replace }, ENV) {
     const normalizedReplace = replace.replace(/\r?\n\r?/g, '\n');
     const startIndex = normalizedOriginal.indexOf(normalizedSearch);
     if (startIndex === -1) throw new Error("Search string not found on file");
-    //AVOID REPLACING WHERE THERE ARE MORE THAN ONE CANDIDATE
     if (startIndex !== normalizedOriginal.lastIndexOf(normalizedSearch)) throw new Error("Multiple matches, increase context and try again");
     const result = normalizedOriginal.substring(0, startIndex)
       + normalizedReplace
@@ -65,9 +64,9 @@ export async function SearchReplaceFile({ filename, search, replace }, ENV) {
     return { result: "Failure", error: error.message };
   }
 }
-SearchReplaceFile.TOOLDEF = {
+SearchReplaceOnceFile.TOOLDEF = {
   type: 'function',
-  name: 'FileTools_SearchReplaceFile',
+  name: 'FileTools_SearchReplaceOnceFile',
   description: 'Perform a search and replace on a local file.',
   parameters: {
     type: 'object',
