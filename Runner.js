@@ -1,3 +1,4 @@
+import { StatusBar } from './core/StatusBar.js';
 import "dotenv/config";
 import { readFile } from "fs/promises";
 import readline from 'readline/promises';
@@ -36,6 +37,22 @@ async function executeTask(agent, task, output) {
   // Use pipeline to write the buffer to the output stream
   await pipeline(stream, appendCost, output, { end: false });
 }
+
+class SafeStdout extends Transform {
+  constructor(statusBar) {
+    super();
+    this.statusBar = statusBar;
+  }
+
+  _transform(chunk, encoding, callback) {
+    process.stdout.write(chunk);
+    if (this.statusBar && this.statusBar.enabled) {
+      this.statusBar.render();
+    }
+    callback();
+  }
+}
+
 async function main(opts) {
   let LOGFILE;
   try {
@@ -51,7 +68,15 @@ async function main(opts) {
       ModifyFile,
       ListFiles]);
     agent.logger.pipe(LOGFILE);
-    agent.signal.on('status', (str) => process.stderr.write(`[STATUS] ${str}\n`));
+    
+    let statusBar = null;
+    if (opts.output === '-' && process.stdout.isTTY) {
+      statusBar = new StatusBar();
+      statusBar.enable();
+      agent.signal.on('status', (str) => statusBar.update(str));
+    } else {
+      agent.signal.on('status', (str) => process.stderr.write(`[STATUS] ${str}\n`));
+    }
 
     // Command Registry
     const registry = new CommandRegistry();
@@ -62,7 +87,16 @@ async function main(opts) {
     const roleCommand = new RoleCommand();
     registry.register(roleCommand);
 
-    const output = opts.output == "-" ? process.stdout : createWriteStream(opts.output, { encoding: "utf8" });
+    let output;
+    if (opts.output === '-') {
+      if (statusBar) {
+        output = new SafeStdout(statusBar);
+      } else {
+        output = process.stdout;
+      }
+    } else {
+      output = createWriteStream(opts.output, { encoding: "utf8" });
+    }
 
     let rawTasks = opts.task.length === 0 ? ['-'] : opts.task;
     const tasks = [];
@@ -99,6 +133,7 @@ async function main(opts) {
           await executeTask(agent, stdinContent, output);
         } else {
           // Interactive mode
+          if (statusBar) statusBar.disable();
           const rl = readline.createInterface({
             input: process.stdin,
             output: process.stdout
@@ -128,6 +163,7 @@ async function main(opts) {
             }
           } finally {
             rl.close();
+            if (statusBar) statusBar.enable();
           }
         }
       } catch (error) {
