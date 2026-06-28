@@ -74,7 +74,7 @@ async function main(opts) {
       ModifyFile,
       ListFiles]);
     agent.logger.pipe(LOGFILE);
-    
+
     let statusBar = null;
     if (opts.output === '-' && process.stdout.isTTY) {
       statusBar = new StatusBar();
@@ -167,18 +167,13 @@ async function main(opts) {
                 continue;
               }
               if (l.trim() === '') {
-                if (++nlacc == 2) {
-                  lines.pop();
-                  if (lines.length > 0) {
-                    await executeTask(agent, lines.join("\n"), output);
-                    lines = [];
-                    nlacc = 0;
-                    rl.prompt();
-                    continue;
-                  } else break;
-                }
-              } else {
-                nlacc = 0;
+                lines.pop();
+                if (lines.length > 0) {
+                  await executeTask(agent, lines.join("\n"), output);
+                  lines = [];
+                  rl.prompt();
+                  continue;
+                } else break;
               }
               lines.push(l);
             }
