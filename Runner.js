@@ -8,7 +8,7 @@ import { text } from "stream/consumers";
 import { createWriteStream } from "fs";
 import { pipeline } from "stream/promises";
 import { Transform } from "stream";
-import { CreateFile, DeleteFile, SearchReplaceFile, ReadFile, ListFiles } from "./tools/FileTools.js";
+import { CreateFile, DeleteFile, ModifyFile, ReadFile, ListFiles } from "./tools/FileTools.js";
 import { FileCommand } from "./commands/FileCommand.js";
 import { CommandRegistry } from "./core/CommandRegistry.js";
 
@@ -46,7 +46,7 @@ async function main(opts) {
       CreateFile,
       DeleteFile,
       ReadFile,
-      SearchReplaceFile,
+      ModifyFile,
       ListFiles]);
     agent.status = (str) => process.stderr.write(`[STATUS] ${str}\n`);
     agent.logger = (str) => LOGFILE.write(str);
@@ -100,7 +100,6 @@ async function main(opts) {
           try {
             console.log("\nPROMPT> ");
             let lines = [];
-            let nlacc = 0;
             for await (const l of rl) {
               if (l.startsWith('@')) {
                 try {
@@ -112,18 +111,12 @@ async function main(opts) {
                 continue;
               }
               if (l.trim() === '') {
-                if (++nlacc == 2) {
-                  lines.pop();
-                  if (lines.length > 0) {
-                    await executeTask(agent, lines.join("\n"), output);
-                    lines = [];
-                    nlacc = 0;
-                    console.log("\nPROMPT> ");
-                    continue;
-                  } else break;
-                }
-              } else {
-                nlacc = 0;
+                if (lines.length > 0) {
+                  await executeTask(agent, lines.join("\n"), output);
+                  lines = [];
+                  console.log("\nPROMPT> ");
+                  continue;
+                } else break;
               }
               lines.push(l);
             }
