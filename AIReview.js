@@ -59,7 +59,7 @@ async function main(repos, opts) {
       }
       const agent = new Agent(model, await Agent.LoadDefaultPersonality("Reviewer"), "sandbox");
       agent.addTools([ReadFile]);
-      agent.status = (s) => process.stderr.write(`[STATUS] ${s}\n`);
+      agent.signal.on('status', (s) => process.stderr.write(`[STATUS] ${s}\n`));
       const stream = agent.Task(`Review the following code diff: \n\n${Diff}`);
 
       process.stderr.write(`[STATUS] Connecting to ${opts.model}...\n`);
