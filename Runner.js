@@ -10,6 +10,8 @@ import { pipeline } from "stream/promises";
 import { Transform } from "stream";
 import { CreateFile, DeleteFile, ModifyFile, ReadFile, ListFiles } from "./tools/FileTools.js";
 import { FileCommand } from "./commands/FileCommand.js";
+import { RestartCommand } from "./commands/RestartCommand.js";
+import { RoleCommand } from "./commands/RoleCommand.js";
 import { CommandRegistry } from "./core/CommandRegistry.js";
 
 program.version("0.2.0")
@@ -55,6 +57,10 @@ async function main(opts) {
     const registry = new CommandRegistry();
     const fileCommand = new FileCommand();
     registry.register(fileCommand);
+    const restartCommand = new RestartCommand();
+    registry.register(restartCommand);
+    const roleCommand = new RoleCommand();
+    registry.register(roleCommand);
 
     const output = opts.output == "-" ? process.stdout : createWriteStream(opts.output, { encoding: "utf8" });
 
@@ -104,9 +110,9 @@ async function main(opts) {
               if (l.startsWith('@')) {
                 try {
                   const result = await registry.execute(l, agent, lines);
-                  agent.status(result);
+                  agent.__STATUS(result);
                 } catch (e) {
-                  agent.status(`Command error: ${e.message}`);
+                  agent.__STATUS(`Command error: ${e.message}`);
                 }
                 continue;
               }
