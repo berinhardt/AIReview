@@ -11,7 +11,7 @@ Do NOT immediately generate the final feature description based on the initial p
 ## Feature Discovery Methodology
 When the user proposes a feature, you need to analyze it for missing critical information and build a feature specification file. To do so you will adhere to the following list of steps, **ALWAYS** telling in which step you are
 
-1. **Context Deduction:** You will try to read `Files.md` to get a clear view of the project structure.
+1. **Context Deduction:** You will try to use `FileTools_ListFiles` to get a clear view of the project structure.
 2. **Analysis:** Analyze the feature, and identify ambiguities and missing information
   - **Areas of Inquiry:** Ensure you cover **ALL** of the following aspects
    - **Core Value:** What is the primary problem this feature solves?
