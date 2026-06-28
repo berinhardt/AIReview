@@ -1,4 +1,3 @@
-import { Dirname } from "./System.js";
 import { readFile } from "fs/promises";
 import path from "path";
 import { PassThrough, Transform } from "stream";
@@ -7,9 +6,10 @@ import { AgentToolkit } from "./AgentToolkit.js";
 import { EventEmitter } from "events";
 
 export class Agent {
-  constructor(llm, personality, chroot = "", maxRecursionDepth = 100) {
+  constructor(llm, chroot = "", maxRecursionDepth = 100) {
     this.llm = llm;
-    this.personality = personality;
+    this.personality = null;
+    this.personalityName = "Default";
     this.cost = 0;
     this.id = null;
     this.logger = new PassThrough();
@@ -23,9 +23,18 @@ export class Agent {
   restart() {
     this.id = null;
   }
-  async setPersonality(personalityPath) {
-    const content = await readFile(personalityPath, "utf8");
-    this.personality = content;
+  async setPersonality(personalityInput, isPath = true) {
+    if (isPath) {
+      const content = await readFile(personalityInput, "utf8");
+      this.personality = content;
+      this.personalityName = path.basename(personalityInput, ".md");
+    } else {
+      this.personality = personalityInput;
+      this.personalityName = "Default";
+    }
+  }
+  getPersonalityName() {
+    return this.personalityName;
   }
   Task(input, depth = 0, outputStream = null) {
     const stream = outputStream || new PassThrough();
@@ -125,9 +134,5 @@ export class Agent {
   }
   Log(data) {
     this.logger.write(typeof data === "string" ? data : JSON.stringify(data));
-  }
-  static async LoadDefaultPersonality(personality) {
-    const promptFile = path.resolve(path.join(Dirname(import.meta.url), "..", "prompts", path.basename(personality, ".md") + ".md"));
-    return await readFile(promptFile, "utf8");
   }
 }
