@@ -9,6 +9,7 @@ import { createWriteStream } from "fs";
 import { pipeline } from "stream/promises";
 import { Transform } from "stream";
 import { CreateFile, SearchReplaceFile, ReadFile } from "./tools/FileTools.js";
+import { FileCommand } from "./commands/FileCommand.js";
 
 program.version("0.2.0")
    .option('-p, --personality <personality>', 'AI personality file', null)
@@ -43,6 +44,11 @@ async function main(opts) {
       agent.addTools([CreateFile, ReadFile, SearchReplaceFile]);
       agent.status = (str) => process.stderr.write(`[STATUS] ${str}\n`);
       agent.logger = (str) => LOGFILE.write(str);
+
+      // Command Registry
+      const commands = new Map();
+      const fileCommand = new FileCommand();
+      commands.set(fileCommand.name, fileCommand);
 
       const output = opts.output == "-" ? process.stdout : createWriteStream(opts.output, { encoding: "utf8" });
 
@@ -90,6 +96,24 @@ async function main(opts) {
                   let lines = [];
                   let nlacc = 0;
                   for await (const l of rl) {
+                     if (l.startsWith('@')) {
+                        const parts = l.trim().substring(1).split(/\s+/);
+                        const commandName = parts[0].toUpperCase();
+                        const args = parts.slice(1);
+                        
+                        const command = commands.get(commandName);
+                        if (command) {
+                           try {
+                              const result = await command.execute(args, agent, lines);
+                              agent.status(result);
+                           } catch (e) {
+                              agent.status(`Command error: ${e.message}`);
+                           }
+                        } else {
+                           agent.status(`Unknown command: @${commandName}`);
+                        }
+                        continue;
+                     }
                      if (l.trim() === '') {
                         if (++nlacc == 2) {
                            lines.pop();
