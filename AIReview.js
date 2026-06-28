@@ -57,7 +57,9 @@ async function main(repos, opts) {
       if (!Diff) {
          throw new Error("No changes to review.");
       }
-      const agent = new Agent(model, await Agent.LoadDefaultPersonality("Reviewer"), "sandbox");
+      const agent = new Agent(model, "sandbox");
+      const reviewerPersonalityPath = path.join(Dirname(import.meta.url), "prompts", "Reviewer.md");
+      await agent.setPersonality(reviewerPersonalityPath, true);
       agent.addTools([ReadFile]);
       agent.signal.on('status', (s) => process.stderr.write(`[STATUS] ${s}\n`));
       const stream = agent.Task(`Review the following code diff: \n\n${Diff}`);

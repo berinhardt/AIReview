@@ -2,8 +2,9 @@ import { StatusBar } from './core/StatusBar.js';
 import "dotenv/config";
 import { readFile } from "fs/promises";
 import readline from 'readline/promises';
+import path from 'path';
 import { program } from 'commander';
-import { LoadLLMModel, ValidateFile } from './core/System.js';
+import { LoadLLMModel, ValidateFile, Dirname } from './core/System.js';
 import { Agent } from './core/Agent.js'
 import { text } from "stream/consumers";
 import { createWriteStream } from "fs";
@@ -58,8 +59,13 @@ async function main(opts) {
   try {
     LOGFILE = createWriteStream(opts.logfile);
     const model = await LoadLLMModel(opts.model);
-    const personality = opts.personality ? await readFile(opts.personality, "utf8") : await Agent.LoadDefaultPersonality('Default');
-    const agent = new Agent(model, personality, opts.chroot);
+    const agent = new Agent(model, opts.chroot);
+    if (opts.personality) {
+      await agent.setPersonality(opts.personality, true);
+    } else {
+      const defaultPersonalityPath = path.join(Dirname(import.meta.url), "prompts", "Default.md");
+      await agent.setPersonality(defaultPersonalityPath, true);
+    }
 
     agent.addTools([
       CreateFile,
@@ -138,26 +144,41 @@ async function main(opts) {
             input: process.stdin,
             output: process.stdout
           });
+
+          const updatePrompt = () => {
+            rl.setPrompt(`${agent.getPersonalityName()}> `);
+          };
+
+          updatePrompt();
+          rl.prompt();
+
           try {
-            console.log("\nPROMPT> ");
             let lines = [];
             for await (const l of rl) {
               if (l.startsWith('@')) {
                 try {
                   const result = await registry.execute(l, agent, lines);
                   agent.Status(result);
+                  updatePrompt();
                 } catch (e) {
                   agent.Status(`Command error: ${e.message}`);
                 }
+                rl.prompt();
                 continue;
               }
               if (l.trim() === '') {
-                if (lines.length > 0) {
-                  await executeTask(agent, lines.join("\n"), output);
-                  lines = [];
-                  console.log("\nPROMPT> ");
-                  continue;
-                } else break;
+                if (++nlacc == 2) {
+                  lines.pop();
+                  if (lines.length > 0) {
+                    await executeTask(agent, lines.join("\n"), output);
+                    lines = [];
+                    nlacc = 0;
+                    rl.prompt();
+                    continue;
+                  } else break;
+                }
+              } else {
+                nlacc = 0;
               }
               lines.push(l);
             }
