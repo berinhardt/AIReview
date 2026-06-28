@@ -4,14 +4,16 @@ import path from "path";
 import { PassThrough, Transform } from "stream";
 import { pipeline } from "stream/promises";
 import { AgentToolkit } from "./AgentToolkit.js";
+import { EventEmitter } from "events";
+
 export class Agent {
   constructor(llm, personality, chroot = "", maxRecursionDepth = 100) {
     this.llm = llm;
     this.personality = personality;
     this.cost = 0;
     this.id = null;
-    this.logger = null;
-    this.status = null;
+    this.logger = new PassThrough();
+    this.signal = new EventEmitter();
     this.tools = new AgentToolkit(chroot);
     this.maxRecursionDepth = maxRecursionDepth;
   }
@@ -28,37 +30,37 @@ export class Agent {
   Task(input, depth = 0, outputStream = null) {
     const stream = outputStream || new PassThrough();
     const myAgent = this;
-    myAgent.__STATUS(`Queueing TASK (depth: ${depth})`);
+    myAgent.Status(`Queueing TASK (depth: ${depth})`);
     const result = myAgent.llm(myAgent.personality, input, {
       ...(myAgent.id !== null && { previous_interaction_id: myAgent.id }),
       tools: myAgent.tools.list()
     });
     let queue = [];
 
-    myAgent.__STATUS("Registering Handlers...");
+    myAgent.Status("Registering Handlers...");
 
     result.on("created", (id) => {
       myAgent.id = id;
-      myAgent.__STATUS("Interaction created! " + id);
+      myAgent.Status("Interaction created! " + id);
     });
     result.on("status", (status) => {
-      myAgent.__STATUS(status);
+      myAgent.Status(status);
     })
     result.on("raw", (status) => {
-      myAgent.__LOG(status);
+      myAgent.Log(status);
     })
-    result.on("request", (r) => myAgent.__LOG("Request", r));
+    result.on("request", (r) => myAgent.Log("Request", r));
     result.on("complete", (cost) => {
-      myAgent.__STATUS("Interaction Complete");
+      myAgent.Status("Interaction Complete");
       myAgent.cost += cost;
     });
     result.on("call_tool", (data) => {
-      myAgent.__STATUS(`Calling ${data.name}`)
-      myAgent.__LOG(`=== PARAMS ${data.call_id}\n${JSON.stringify(data.param)}\n===\n`);
+      myAgent.Status(`Calling ${data.name}`)
+      myAgent.Log(`=== PARAMS ${data.call_id}\n${JSON.stringify(data.param)}\n===\n`);
       queue.push(data);
     });
     result.on("error", (error) => {
-      myAgent.__LOG(error);
+      myAgent.Log(error);
     })
     result.on("end", () => {
       result.removeAllListeners();
@@ -79,11 +81,11 @@ export class Agent {
               response.result = { error: error.message };
               response.is_error = true;
             }
-            myAgent.__LOG(`=== RESULT ${data.call_id}\n${JSON.stringify(response)}\n===\n`);
+            myAgent.Log(`=== RESULT ${data.call_id}\n${JSON.stringify(response)}\n===\n`);
             chained.push(response);
           }
           if (depth + 1 >= myAgent.maxRecursionDepth) {
-            myAgent.__LOG("Max recursion depth reached. Stopping.");
+            myAgent.Log("Max recursion depth reached. Stopping.");
             const err = new Error("Max recursion depth reached");
             // Explicitly destroy the result stream to abort the LLM interaction
             if (typeof result.destroy === 'function') {
@@ -105,24 +107,24 @@ export class Agent {
     });
     const logpipe = new Transform({
       transform(chunk, encoding, cb) {
-        myAgent.__LOG(chunk.toString("utf8"));
+        myAgent.Log(chunk.toString("utf8"));
         cb(null, chunk);
       }
     });
     pipeline(result, logpipe, stream, { end: false }).catch((err) => {
-      myAgent.__LOG(`Pipeline error: ${err.message}`);
+      myAgent.Log(`Pipeline error: ${err.message}`);
       if (!stream.destroyed) {
         stream.emit("error", err);
       }
     });
     return stream;
   }
-  __STATUS(str) {
-    if (typeof this.status === "function") this.status(str);
-    this.__LOG(`${str}\n`);
+  Status(str) {
+    this.signal.emit("status", str);
+    this.Log(`${str}\n`);
   }
-  __LOG(data) {
-    if (typeof this.logger === "function") this.logger(typeof data === "string" ? data : JSON.stringify(data));
+  Log(data) {
+    this.logger.write(typeof data === "string" ? data : JSON.stringify(data));
   }
   static async LoadDefaultPersonality(personality) {
     const promptFile = path.resolve(path.join(Dirname(import.meta.url), "..", "prompts", path.basename(personality, ".md") + ".md"));

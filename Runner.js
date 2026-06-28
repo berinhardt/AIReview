@@ -50,8 +50,8 @@ async function main(opts) {
       ReadFile,
       ModifyFile,
       ListFiles]);
-    agent.status = (str) => process.stderr.write(`[STATUS] ${str}\n`);
-    agent.logger = (str) => LOGFILE.write(str);
+    agent.logger.pipe(LOGFILE);
+    agent.signal.on('status', (str) => process.stderr.write(`[STATUS] ${str}\n`));
 
     // Command Registry
     const registry = new CommandRegistry();
@@ -74,10 +74,10 @@ async function main(opts) {
         if (valid) {
           tasks.push(task);
         } else {
-          agent.__STATUS(`Skipping invalid task '${task}': ${error}`);
+          agent.Status(`Skipping invalid task '${task}': ${error}`);
         }
       } else {
-        agent.__STATUS(`Skipping empty task entry`);
+        agent.Status(`Skipping empty task entry`);
       }
     }
 
@@ -110,9 +110,9 @@ async function main(opts) {
               if (l.startsWith('@')) {
                 try {
                   const result = await registry.execute(l, agent, lines);
-                  agent.__STATUS(result);
+                  agent.Status(result);
                 } catch (e) {
-                  agent.__STATUS(`Command error: ${e.message}`);
+                  agent.Status(`Command error: ${e.message}`);
                 }
                 continue;
               }
@@ -131,7 +131,7 @@ async function main(opts) {
           }
         }
       } catch (error) {
-        agent.__STATUS(`Error executing task ${task}: ${error.message}`);
+        agent.Status(`Error executing task ${task}: ${error.message}`);
       }
     }
     if (output != process.stdout && !output.closed) output.end();
