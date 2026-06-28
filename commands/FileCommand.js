@@ -6,18 +6,25 @@ const MAX_FILE_SIZE = 1024 * 1024; // 1MB
 export class FileCommand extends Command {
     constructor() {
         super("FILE");
+        this.META = {
+            name: "FILE",
+            description: "Load a file into the prompt buffer",
+            arguments: [
+                { type: "string", name: "filename", description: "The path to the file" }
+            ]
+        };
     }
 
     /**
-     * @param {string[]} args
+     * @param {object} args
      * @param {object} agent
      * @param {string[]} promptBuffer
      */
     async execute(args, agent, promptBuffer) {
-        if (args.length === 0) {
+        const { filename } = args;
+        if (!filename) {
             throw new Error("Usage: @FILE <filename>");
         }
-        const filename = args[0];
         try {
             const fileStat = await stat(filename);
             if (fileStat.size > MAX_FILE_SIZE) {
