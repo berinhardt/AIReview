@@ -18,6 +18,13 @@ export class Agent {
   addTools(ary) {
     for (const t of ary) this.tools.add(t);
   }
+  restart() {
+    this.id = null;
+  }
+  async setPersonality(personalityPath) {
+    const content = await readFile(personalityPath, "utf8");
+    this.personality = content;
+  }
   Task(input, depth = 0, outputStream = null) {
     const stream = outputStream || new PassThrough();
     const myAgent = this;
