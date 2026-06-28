@@ -22,12 +22,31 @@ export async function SanitizePath(filename, chroot) {
    await mkdir(chroot, { recursive: true });
    const cwd = await realpath(chroot);
    let targetPath = path.resolve(cwd, filename);
+
+   // Check for hidden components in the target path
+   const relativeTarget = path.relative(cwd, targetPath);
+   const targetComponents = relativeTarget.split(path.sep);
+   for (const component of targetComponents) {
+       if (component.startsWith('.') && component !== '.' && component !== '..') {
+           throw new Error("Permission Denied");
+       }
+   }
+
    let checkPath = targetPath;
    while (true) {
       try {
          const realPath = await realpath(checkPath);
          const relative = path.relative(cwd, realPath);
          if (relative.startsWith('..') || path.isAbsolute(relative)) throw new Error("Permission Denied");
+         
+         // Check for hidden components in the real path (to catch symlink tricks)
+         const realComponents = relative.split(path.sep);
+         for (const component of realComponents) {
+             if (component.startsWith('.') && component !== '.' && component !== '..') {
+                 throw new Error("Permission Denied");
+             }
+         }
+         
          return targetPath;
       } catch (error) {
          if (error.code === 'ENOENT') {
