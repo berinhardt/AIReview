@@ -7,8 +7,8 @@ import { runGitCommand, checkGitRepo, SanitizePath } from '../../core/System.js'
  * @param {string} [revision]
  * @returns {string | {error: string}} Returns the diff string, or an error object {"error": "invalid rev"} if the revision is invalid.
  */
-export function GitDiff({ filename, revision }, ENV) {
-  const absolutePath = SanitizePath(filename, ENV.cwd);
+export async function GitDiff({ filename, revision }, ENV) {
+  const absolutePath = await SanitizePath(filename, ENV.cwd);
   const dir = path.dirname(absolutePath);
 
   checkGitRepo(dir);
