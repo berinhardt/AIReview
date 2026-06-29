@@ -17,8 +17,9 @@ export class AgentToolkit {
   list() {
     return this.tools;
   }
-  async call(name, param) {
+  async call(name, param, agent) {
     if (typeof this.map[name] === "undefined") throw new Error(`Unknown tool: ${name}`);
-    return await this.map[name](param, this.ENV);
+    const env = { ...this.ENV, agent };
+    return await this.map[name](param, env);
   }
 }

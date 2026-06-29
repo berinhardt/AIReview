@@ -12,6 +12,7 @@ export class Agent {
     this.personalityName = "Default";
     this.cost = 0;
     this.id = null;
+    this.notes = {};
     this.logger = new PassThrough();
     this.signal = new EventEmitter();
     this.tools = new AgentToolkit(chroot);
@@ -23,6 +24,7 @@ export class Agent {
   }
   restart() {
     this.id = null;
+    this.notes = {};
   }
   async setPersonality(personalityInput, isPath = true) {
     if (isPath) {
@@ -88,7 +90,7 @@ export class Agent {
               result: [{ type: 'text', text: null }]
             };
             try {
-              let t = await myAgent.tools.call(data.name, data.param);
+              let t = await myAgent.tools.call(data.name, data.param, myAgent);
               response.result = t;
             } catch (error) {
               response.result = { error: error.message };

@@ -12,6 +12,7 @@ import { pipeline } from "stream/promises";
 import { Transform } from "stream";
 import { CreateFile, DeleteFile, ModifyFile, ReadFile, ListFiles } from "./tools/FileTools.js";
 import { GitStatus, GitDiff } from "./tools/GitTools.js";
+import { ReviewResult } from "./tools/ReviewTools.js";
 import { FileCommand } from "./commands/FileCommand.js";
 import { ResetCommand } from "./commands/ResetCommand.js";
 import { RoleCommand } from "./commands/RoleCommand.js";
@@ -92,7 +93,8 @@ async function main(opts) {
       ModifyFile,
       ListFiles,
       GitStatus,
-      GitDiff]);
+      GitDiff,
+      ReviewResult]);
     agent.logger.pipe(LOGFILE);
 
     let statusBar = null;
