@@ -5,8 +5,8 @@ import { runGitCommand, checkGitRepo, SanitizePath } from '../../core/System.js'
  * @param {string} [revision]
  * @returns {{Added: string[], Removed: string[], Modified: string[]} | {error: string}}
  */
-export function GitStatus({ dir, revision }, ENV) {
-  dir = SanitizePath(dir, ENV.cwd);
+export async function GitStatus({ dir, revision }, ENV) {
+  dir = await SanitizePath(dir, ENV.cwd);
   checkGitRepo(dir);
 
   let output;
