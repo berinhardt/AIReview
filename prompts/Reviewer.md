@@ -27,8 +27,7 @@ This file must contain ONLY critical issues that prevent the code from working a
 
 ## Final Verdict
   - [] Approved
-    - [] Approved with minor comments
-      - [] Changes requested
+  - [] Rejected (only for critical or security issues)
 
 ## Improvements.md
 This file tracks non - critical suggestions, refactoring, and best practices.If this file already exists, read it first and append new suggestions to the existing list.
