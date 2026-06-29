@@ -40,7 +40,7 @@ export class Agent {
     const stream = outputStream || new PassThrough();
     const myAgent = this;
     myAgent.Status(`Queueing TASK (depth: ${depth})`);
-    const result = myAgent.llm(myAgent.personality, input, {
+    const result = myAgent.llm.request(myAgent.personality, input, {
       ...(myAgent.id !== null && { previous_interaction_id: myAgent.id }),
       tools: myAgent.tools.list()
     });
@@ -48,6 +48,9 @@ export class Agent {
 
     myAgent.Status("Registering Handlers...");
 
+    result.on("request", (req) => {
+      myAgent.Log(`REQUEST ${JSON.stringify(req)}\n`);
+    });
     result.on("created", (id) => {
       myAgent.id = id;
       myAgent.Status("Interaction created! " + id);
@@ -95,9 +98,9 @@ export class Agent {
           if (depth + 1 >= myAgent.maxRecursionDepth) {
             myAgent.Log("Max recursion depth reached. Stopping.");
             const err = new Error("Max recursion depth reached");
-            // Explicitly destroy the result stream to abort the LLM interaction
-            if (typeof result.destroy === 'function') {
-              result.destroy(err);
+            // Explicitly call abort on the LLM instance
+            if (myAgent.id !== null) {
+              myAgent.llm.abort(myAgent.id);
             }
             if (!stream.destroyed) {
               stream.emit("error", err);

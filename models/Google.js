@@ -1,93 +1,105 @@
-import { GoogleGenAI, ThinkingLevel } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { Readable } from "stream";
-function GeminiLLMRequest(model, SystemPrompt, Input, config = {}) {
-  const abortContext = {
-    id: null
-  };
-  const stream = new Readable({
-    read() { },
-    async destroy(err, cb) {
-      if (abortContext.id !== null) {
-        this.emit("status", "Aborting...");
-        await GeminiAbort(abortContext.id);
+
+class GeminiLLM {
+  constructor(modelConfig) {
+    this.modelConfig = modelConfig;
+  }
+
+  getName() {
+    return this.modelConfig.name;
+  }
+
+  async abort(interactionId) {
+    const APIKEY = process.env.GEMINI_API_KEY;
+    if (!APIKEY) throw new Error("NO API KEY FOUND!");
+    const client = new GoogleGenAI({ apiKey: APIKEY });
+    const interaction = await client.interactions.cancel(interactionId);
+    console.error("GEMINI ABORT", interaction.status);
+  }
+
+  request(SystemPrompt, Input, config = {}) {
+    const stream = new Readable({
+      read() { }
+    });
+    
+    (async () => {
+      try {
+        if (this.modelConfig.context && SystemPrompt.length + Input.length >= this.modelConfig.context * 4) {
+          throw new Error("Input too large");
+        }
+        const APIKEY = process.env.GEMINI_API_KEY;
+        if (!APIKEY) throw new Error("NO API KEY FOUND!");
+        const client = new GoogleGenAI({ apiKey: APIKEY });
+        const {
+          temperature = 0.0,
+          thinking_level = "high",
+          tools = null,
+          response_format = null,
+          previous_interaction_id = null,
+        } = config || {};
+        const request = {
+          model: this.modelConfig.name,
+          system_instruction: SystemPrompt,
+          input: Input,
+          ...(previous_interaction_id !== null && { previous_interaction_id }),
+          ...(tools !== null && { tools }),
+          ...(response_format !== null && { response_format }),
+          stream: true,
+          generation_config: {
+            temperature: temperature,
+            thinking_level: thinking_level
+          },
+        }
+        
+        // Emit the request object
+        stream.emit("request", request);
+        
+        const interaction = await client.interactions.create(request);
+        let DeltaHandler = null;
+        for await (const data of interaction) {
+          if (stream.closed) break;
+          stream.emit("raw", data);
+          switch (data.event_type) {
+            case 'interaction.created':
+              stream.emit("created", data.interaction.id);
+              break;
+            case 'interaction.status_update':
+              stream.emit("status", data.status);
+              break;
+            case 'step.start':
+              DeltaHandler = DeltaHandlerStore[data.step.type];
+              if (DeltaHandler) DeltaHandler = DeltaHandler(data.step, stream);
+              stream.emit("new_step", data.index, data.step.type);
+              stream.emit("status", `#${data.index} > ${data.step.type}`);
+              break;
+            case 'step.delta':
+              stream.emit("update_" + data.delta.type, data.index, data.delta);
+              if (DeltaHandler) DeltaHandler.parse(data.delta);
+              break;
+            case 'step.stop':
+              if (DeltaHandler) DeltaHandler.end();
+              DeltaHandler = null;
+              stream.emit("end_step", data.index);
+              stream.emit("status", `#${data.index} done`);
+              break;
+            case 'interaction.completed':
+              stream.emit("complete", calculateCosts(this.modelConfig, data.interaction.usage));
+              stream.push(null);
+              break;
+            case 'error':
+              throw new Error(data.error.message);
+              break;
+          };
+        }
+      } catch (err) {
+        stream.emit("error", err);
       }
-      cb(err);
-    }
-  });
-  (async () => {
-    try {
-      if (model.context && SystemPrompt.length + Input.length >= model.context * 4) {
-        throw new Error("Input too large");
-      }
-      const APIKEY = process.env.GEMINI_API_KEY;
-      if (!APIKEY) throw new Error("NO API KEY FOUND!");
-      const client = new GoogleGenAI({ apiKey: APIKEY });
-      const {
-        temperature = 0.0,
-        thinking_level = "high",
-        tools = null,
-        response_format = null,
-        previous_interaction_id = null,
-      } = config || {};
-      const request = {
-        model: model.name,
-        system_instruction: SystemPrompt,
-        input: Input,
-        ...(previous_interaction_id !== null && { previous_interaction_id }),
-        ...(tools !== null && { tools }),
-        ...(response_format !== null && { response_format }),
-        stream: true,
-        generation_config: {
-          temperature: temperature,
-          thinking_level: thinking_level
-        },
-      }
-      const interaction = await client.interactions.create(request);
-      let DeltaHandler = null;
-      for await (const data of interaction) {
-        if (stream.closed) break;
-        stream.emit("raw", data);
-        switch (data.event_type) {
-          case 'interaction.created':
-            abortContext.id = data.interaction.id;
-            stream.emit("created", data.interaction.id);
-            break;
-          case 'interaction.status_update':
-            stream.emit("status", data.status);
-            break;
-          case 'step.start':
-            abortContext.tout = null;
-            DeltaHandler = DeltaHandlerStore[data.step.type];
-            if (DeltaHandler) DeltaHandler = DeltaHandler(data.step, stream);
-            stream.emit("new_step", data.index, data.step.type);
-            stream.emit("status", `#${data.index} > ${data.step.type}`);
-            break;
-          case 'step.delta':
-            stream.emit("update_" + data.delta.type, data.index, data.delta);
-            if (DeltaHandler) DeltaHandler.parse(data.delta);
-            break;
-          case 'step.stop':
-            if (DeltaHandler) DeltaHandler.end();
-            DeltaHandler = null;
-            stream.emit("end_step", data.index);
-            stream.emit("status", `#${data.index} done`);
-            break;
-          case 'interaction.completed':
-            abortContext.id = null;
-            stream.emit("complete", calculateCosts(model, data.interaction.usage));
-            stream.push(null);
-            break;
-          case 'error':
-            throw new Error(data.error.message);
-            break;
-        };
-      }
-    } catch (err) {
-      stream.emit("error", err);
-    }
-  })();
-  return stream;
+    })();
+    return stream;
+  }
 }
+
 const DeltaHandlerStore = {
   model_output: (step, stream) => ({
     parse(delta) { delta.type == "text" && stream.push(delta.text); },
@@ -112,13 +124,6 @@ const DeltaHandlerStore = {
   })
 }
 
-async function GeminiAbort(id) {
-  const APIKEY = process.env.GEMINI_API_KEY;
-  if (!APIKEY) throw new Error("NO API KEY FOUND!");
-  const client = new GoogleGenAI({ apiKey: APIKEY });
-  const interaction = await client.interactions.cancel(id);
-  console.error("GEMINI ABORT", interaction.status);
-}
 function calculateCosts(model, usage) {
   const {
     total_input_tokens, totalInputTokens,
@@ -136,23 +141,16 @@ function calculateCosts(model, usage) {
   return Number(cost.toFixed(6));
 }
 
-export function Gemini31FlashLite(SystemPrompt, Input, config = {}) {
-  return GeminiLLMRequest({
+export const Gemini31FlashLite = new GeminiLLM({
     name: "gemini-3.1-flash-lite",
     context: 1048576,
     input: 0.25,
     output: 1.5
-  }, SystemPrompt, Input, config);
-}
-Gemini31FlashLite.ABORT = GeminiAbort;
+});
 
-export function Gemini31Pro(SystemPrompt, Input, config = {}) {
-  return GeminiLLMRequest({
+export const Gemini31Pro = new GeminiLLM({
     name: "gemini-3.1-pro-preview",
     context: 1048576,
     input: 2,
     output: 12,
-  }, SystemPrompt, Input, config);
-}
-Gemini31Pro.ABORT = GeminiAbort;
-
+});
