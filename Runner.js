@@ -17,6 +17,7 @@ import { FileCommand } from "./commands/FileCommand.js";
 import { ResetCommand } from "./commands/ResetCommand.js";
 import { RoleCommand } from "./commands/RoleCommand.js";
 import { TaskCommand } from "./commands/TaskCommand.js";
+import { DevLoopCommand } from "./commands/DevLoopCommand.js";
 import { CommandRegistry } from "./core/CommandRegistry.js";
 
 program.version("0.2.0")
@@ -118,6 +119,8 @@ async function main(opts) {
     registry.register(roleCommand);
     const taskCommand = new TaskCommand();
     registry.register(taskCommand);
+    const devLoopCommand = new DevLoopCommand();
+    registry.register(devLoopCommand);
 
     let output;
     if (opts.output === '-') {
