@@ -12,6 +12,7 @@ export class ResetCommand extends Command {
 
     async execute(args, agent, promptBuffer) {
         agent.restart();
-        return "Agent reset.";
+        promptBuffer.length = 0;
+        return "Agent and input buffer reset.";
     }
 }
