@@ -15,6 +15,7 @@ import { GitStatus, GitDiff } from "./tools/GitTools.js";
 import { FileCommand } from "./commands/FileCommand.js";
 import { ResetCommand } from "./commands/ResetCommand.js";
 import { RoleCommand } from "./commands/RoleCommand.js";
+import { TaskCommand } from "./commands/TaskCommand.js";
 import { CommandRegistry } from "./core/CommandRegistry.js";
 
 program.version("0.2.0")
@@ -113,6 +114,8 @@ async function main(opts) {
     registry.register(resetCommand);
     const roleCommand = new RoleCommand();
     registry.register(roleCommand);
+    const taskCommand = new TaskCommand();
+    registry.register(taskCommand);
 
     let output;
     if (opts.output === '-') {
