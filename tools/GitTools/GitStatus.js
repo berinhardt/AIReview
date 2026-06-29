@@ -2,13 +2,27 @@ import { runGitCommand, checkGitRepo, SanitizePath } from '../../core/System.js'
 
 /**
  * @param {string} dir
- * @returns {{Added: string[], Removed: string[], Modified: string[]}}
+ * @param {string} [revision]
+ * @returns {{Added: string[], Removed: string[], Modified: string[]} | {error: string}}
  */
-export function GitStatus({ dir }, ENV) {
+export function GitStatus({ dir, revision }, ENV) {
   dir = SanitizePath(dir, ENV.cwd);
   checkGitRepo(dir);
 
-  const output = runGitCommand(['status', '--porcelain'], dir);
+  let output;
+  try {
+    if (revision) {
+      output = runGitCommand(['diff', '--name-status', revision], dir);
+    } else {
+      output = runGitCommand(['status', '--porcelain'], dir);
+    }
+  } catch (error) {
+    if (revision && (error.message.includes('ambiguous argument') || error.message.includes('bad revision'))) {
+      return { error: 'invalid rev' };
+    }
+    throw error;
+  }
+
   const lines = output.trim().split('\n').filter(line => line.length > 0);
 
   const status = {
@@ -18,13 +32,27 @@ export function GitStatus({ dir }, ENV) {
   };
 
   for (const line of lines) {
-    const code = line.substring(0, 2);
-    const file = line.substring(3);
+    if (revision) {
+      // git diff --name-status <revision>
+      // Format: [Status]\t[File]
+      const parts = line.split('\t');
+      const code = parts[0];
+      const file = parts[1];
 
-    if (code.includes('A')) status.Added.push(file);
-    else if (code.includes('D')) status.Removed.push(file);
-    else if (code.includes('M')) status.Modified.push(file);
-    else if (code === '??') status.Added.push(file); // Untracked files
+      if (code === 'A') status.Added.push(file);
+      else if (code === 'D') status.Removed.push(file);
+      else if (code === 'M') status.Modified.push(file);
+    } else {
+      // git status --porcelain
+      // Format: [Code] [File]
+      const code = line.substring(0, 2);
+      const file = line.substring(3);
+
+      if (code.includes('A')) status.Added.push(file);
+      else if (code.includes('D')) status.Removed.push(file);
+      else if (code.includes('M')) status.Modified.push(file);
+      else if (code === '??') status.Added.push(file); // Untracked files
+    }
   }
 
   return status;
@@ -40,6 +68,10 @@ GitStatus.TOOLDEF = {
       dir: {
         type: 'string',
         description: 'The directory path to check.'
+      },
+      revision: {
+        type: 'string',
+        description: 'Optional revision (branch, commit, tag) to compare against.'
       }
     },
     required: ['dir']

@@ -4,9 +4,10 @@ import { runGitCommand, checkGitRepo, SanitizePath } from '../../core/System.js'
 
 /**
  * @param {string} filename
- * @returns {string}
+ * @param {string} [revision]
+ * @returns {string | {error: string}} Returns the diff string, or an error object {"error": "invalid rev"} if the revision is invalid.
  */
-export function GitDiff({ filename }, ENV) {
+export function GitDiff({ filename, revision }, ENV) {
   const absolutePath = SanitizePath(filename, ENV.cwd);
   const dir = path.dirname(absolutePath);
 
@@ -16,7 +17,18 @@ export function GitDiff({ filename }, ENV) {
     throw new Error('File not found');
   }
 
-  return runGitCommand(['diff', filename], dir);
+  try {
+    if (revision) {
+      return runGitCommand(['diff', revision, '--', filename], dir);
+    } else {
+      return runGitCommand(['diff', filename], dir);
+    }
+  } catch (error) {
+    if (revision && (error.message.includes('ambiguous argument') || error.message.includes('bad revision'))) {
+      return { error: 'invalid rev' };
+    }
+    throw error;
+  }
 }
 
 GitDiff.TOOLDEF = {
@@ -29,6 +41,10 @@ GitDiff.TOOLDEF = {
       filename: {
         type: 'string',
         description: 'The filename (relative to the project root).'
+      },
+      revision: {
+        type: 'string',
+        description: 'Optional revision (branch, commit, tag) to compare against.'
       }
     },
     required: ['filename']
