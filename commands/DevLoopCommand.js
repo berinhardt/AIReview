@@ -6,112 +6,115 @@ import readline from 'readline/promises';
 import { pipeline } from 'stream/promises';
 
 export class DevLoopCommand extends Command {
-    constructor() {
-        super('DEVLOOP');
-        this.META = {
-            name: 'DEVLOOP',
-            arguments: [{ name: 'featureFile', type: 'string' }]
-        };
-    }
+   constructor() {
+      super('DEVLOOP');
+      this.META = {
+         name: 'DEVLOOP',
+         arguments: [{ name: 'featureFile', type: 'string' }]
+      };
+   }
 
-    async execute(args, config) {
-        const { featureFile } = args;
-        const { agent, statusBar, outputStream } = config;
-        if (!featureFile) {
-            return "Error: Missing <Feature-File> argument.";
-        }
+   async execute(args, config) {
+      const { featureFile } = args;
+      const { agent, statusBar, outputStream } = config;
+      if (!featureFile) {
+         return "Error: Missing <Feature-File> argument.";
+      }
 
-        const MAX_LOOP_ITERATIONS = 5;
-        let iteration = 1;
+      const MAX_LOOP_ITERATIONS = 5;
+      let iteration = 1;
 
-        const coderPersonality = path.join(Dirname(import.meta.url), '..', 'prompts', 'Coder.md');
-        const reviewerPersonality = path.join(Dirname(import.meta.url), '..', 'prompts', 'Reviewer.md');
+      const coderPersonality = path.join(Dirname(import.meta.url), '..', 'prompts', 'Coder.md');
+      const reviewerPersonality = path.join(Dirname(import.meta.url), '..', 'prompts', 'Reviewer.md');
 
-        // Resolve feature file relative to process.cwd()
-        const absoluteFeatureFile = path.resolve(process.cwd(), featureFile);
-        
-        // Check if feature file exists
-        try {
-            await access(absoluteFeatureFile);
-        } catch (e) {
-            return `Error: Feature file not found at ${absoluteFeatureFile}`;
-        }
+      // Resolve feature file relative to process.cwd()
+      const absoluteFeatureFile = path.resolve(process.cwd(), featureFile);
 
-        const runTask = async (personality, taskContent) => {
-            await agent.setPersonality(personality, true);
-            const stream = agent.Task(taskContent, 0, outputStream);
-            await new Promise((resolve, reject) => {
-                stream.on('end', resolve);
-                stream.on('error', reject);
-            });
-        };
+      // Check if feature file exists
+      try {
+         await access(absoluteFeatureFile);
+      } catch (e) {
+         return `Error: Feature file not found at ${absoluteFeatureFile}`;
+      }
 
-        statusBar?.enable();
-        try {
-            while (iteration <= MAX_LOOP_ITERATIONS) {
-                agent.Status(`Iteration ${iteration}/${MAX_LOOP_ITERATIONS}`);
+      const runTask = async (personality, taskContent) => {
+         await agent.setPersonality(personality);
+         const stream = agent.Task(taskContent);
+         await pipeline(stream, outputStream, { end: false });
+      };
 
-                // 1. Coder
-                agent.Status("--- Coder ---");
-                agent.restart();
-                let coderTask = await readFile(absoluteFeatureFile, 'utf8');
-                
-                if (iteration > 1) {
-                    // Add Review.md (mandatory) and Improvements.md (optional) if they exist in chroot
-                    const chroot = agent.tools.ENV.cwd;
-                    
-                    // Check Review.md
-                    try {
-                        const reviewPath = path.join(chroot, 'Review.md');
-                        await access(reviewPath);
-                        const review = await readFile(reviewPath, 'utf8');
-                        coderTask += `\n\nReview:\n${review}`;
-                    } catch (e) {
-                        return "Error: Review.md not found in chroot.";
-                    }
+      statusBar?.enable();
+      try {
+         agent.notes.reviewAccepted = false;
+         while (iteration <= MAX_LOOP_ITERATIONS) {
+            agent.Status(`Iteration ${iteration}/${MAX_LOOP_ITERATIONS}`);
 
-                    // Check Improvements.md
-                    try {
-                        const improvementsPath = path.join(chroot, 'Improvements.md');
-                        await access(improvementsPath);
-                        const improvements = await readFile(improvementsPath, 'utf8');
-                        coderTask += `\n\nImprovements:\n${improvements}`;
-                    } catch (e) {
-                        // Optional, ignore
-                    }
-                }
-                
-                await runTask(coderPersonality, coderTask);
+            // 1. Coder
+            agent.Status("--- Coder ---");
+            agent.restart();
+            let coderTask = await readFile(absoluteFeatureFile, 'utf8');
 
-                // 2. Reviewer
-                agent.Status("--- Reviewer ---");
-                agent.restart();
-                const reviewerTask = await readFile(absoluteFeatureFile, 'utf8');
-                await runTask(reviewerPersonality, reviewerTask);
+            if (iteration > 1) {
+               // Add Review.md (mandatory) and Improvements.md (optional) if they exist in chroot
+               const chroot = agent.tools.ENV.cwd;
 
-                if (agent.notes.reviewAccepted) {
-                    return "DevLoop completed successfully.";
-                }
+               // Check Review.md
+               try {
+                  const reviewPath = path.join(chroot, 'Review.md');
+                  await access(reviewPath);
+                  const review = await readFile(reviewPath, 'utf8');
+                  coderTask += `\n\nReview:\n${review}`;
+               } catch (e) {
+                  return "Error: Review.md not found in chroot.";
+               }
 
-                iteration++;
-
-                if (iteration > MAX_LOOP_ITERATIONS) {
-                    const rl = readline.createInterface({
-                        input: process.stdin,
-                        output: process.stdout
-                    });
-                    const answer = await rl.question("Loop limit reached. Continue? [y/n] ");
-                    rl.close();
-                    if (answer.toLowerCase() === 'y') {
-                        iteration = 1;
-                    } else {
-                        return "DevLoop aborted by user.";
-                    }
-                }
+               // Check Improvements.md
+               try {
+                  const improvementsPath = path.join(chroot, 'Improvements.md');
+                  await access(improvementsPath);
+                  const improvements = await readFile(improvementsPath, 'utf8');
+                  coderTask += `\n\nImprovements:\n${improvements}`;
+               } catch (e) {
+                  // Optional, ignore
+               }
             }
-            return "DevLoop finished.";
-        } finally {
-            statusBar?.disable();
-        }
-    }
+            console.log("WILL RUN CODER TASK");
+            await runTask(coderPersonality, coderTask);
+            console.log("DID RUN CODER TASK");
+
+            // 2. Reviewer
+            agent.Status("--- Reviewer ---");
+            agent.restart();
+            const reviewerTask = await readFile(absoluteFeatureFile, 'utf8');
+            console.log("WILL RUN REVIEWER TASK");
+            await runTask(reviewerPersonality, reviewerTask);
+
+            if (agent.notes.reviewAccepted) {
+               return "DevLoop completed successfully.";
+            }
+
+            iteration++;
+
+            if (iteration > MAX_LOOP_ITERATIONS) {
+               const rl = readline.createInterface({
+                  input: process.stdin,
+                  output: process.stdout
+               });
+               const answer = await rl.question("Loop limit reached. Continue? [y/n] ");
+               rl.close();
+               if (answer.toLowerCase() === 'y') {
+                  iteration = 1;
+               } else {
+                  return "DevLoop aborted by user.";
+               }
+            }
+         }
+         return "DevLoop finished.";
+      } catch (error) {
+         console.log(error);
+         throw error;
+      } finally {
+         statusBar?.disable();
+      }
+   }
 }
