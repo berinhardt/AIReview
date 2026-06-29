@@ -11,6 +11,7 @@ import { createWriteStream } from "fs";
 import { pipeline } from "stream/promises";
 import { Transform } from "stream";
 import { CreateFile, DeleteFile, ModifyFile, ReadFile, ListFiles } from "./tools/FileTools.js";
+import { GitStatus, GitDiff } from "./tools/GitTools.js";
 import { FileCommand } from "./commands/FileCommand.js";
 import { ResetCommand } from "./commands/ResetCommand.js";
 import { RoleCommand } from "./commands/RoleCommand.js";
@@ -88,7 +89,9 @@ async function main(opts) {
       DeleteFile,
       ReadFile,
       ModifyFile,
-      ListFiles]);
+      ListFiles,
+      GitStatus,
+      GitDiff]);
     agent.logger.pipe(LOGFILE);
 
     let statusBar = null;
