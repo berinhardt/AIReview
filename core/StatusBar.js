@@ -12,11 +12,11 @@ export class StatusBar {
   }
 
   disable() {
-    this.enabled = false;
     this.clear();
+    this.enabled = false;
   }
 
-  update(status) {
+  setValue(status) {
     this.status = status;
     if (this.enabled) {
       this.render();
@@ -25,22 +25,14 @@ export class StatusBar {
 
   render() {
     if (!this.enabled) return;
-    
-    // Save cursor
-    process.stdout.write('\x1b[s');
-    
-    // Move to last line
-    readline.cursorTo(process.stdout, 0, process.stdout.rows - 1);
-    readline.clearLine(process.stdout, 0);
+
+    this.clear();
     process.stdout.write(`[STATUS] ${this.status}`);
-    
-    // Restore cursor
-    process.stdout.write('\x1b[u');
   }
 
   clear() {
-    // Move to last line
-    readline.cursorTo(process.stdout, 0, process.stdout.rows - 1);
+    if (!this.enabled) return;
     readline.clearLine(process.stdout, 0);
+    readline.cursorTo(process.stdout, 0);
   }
 }

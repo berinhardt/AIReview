@@ -56,9 +56,8 @@ export class Agent {
       myAgent.Status(status);
     })
     result.on("raw", (status) => {
-      myAgent.Log(status);
+      myAgent.Log(`RAW ${JSON.stringify(status)}\n`);
     })
-    result.on("request", (r) => myAgent.Log("Request", r));
     result.on("complete", (cost) => {
       myAgent.Status("Interaction Complete");
       myAgent.cost += cost;
@@ -69,7 +68,7 @@ export class Agent {
       queue.push(data);
     });
     result.on("error", (error) => {
-      myAgent.Log(error);
+      myAgent.Log(`ERROR ${error}\n`);
     })
     result.on("end", () => {
       result.removeAllListeners();
@@ -121,16 +120,15 @@ export class Agent {
       }
     });
     pipeline(result, logpipe, stream, { end: false }).catch((err) => {
-      myAgent.Log(`Pipeline error: ${err.message}`);
-      if (!stream.destroyed) {
+      myAgent.Log(`Pipeline error: ${err.message}\n`);
+      if (!stream.destroyed)
         stream.emit("error", err);
-      }
     });
     return stream;
   }
   Status(str) {
     this.signal.emit("status", str);
-    this.Log(`${str}\n`);
+    this.Log(`[STATUS] ${str}\n`);
   }
   Log(data) {
     this.logger.write(typeof data === "string" ? data : JSON.stringify(data));

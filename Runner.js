@@ -43,14 +43,30 @@ class SafeStdout extends Transform {
   constructor(statusBar) {
     super();
     this.statusBar = statusBar;
+    this.buffer = "";
   }
 
   _transform(chunk, encoding, callback) {
-    process.stdout.write(chunk);
-    if (this.statusBar && this.statusBar.enabled) {
-      this.statusBar.render();
+    const nlpos = chunk.indexOf("\n");
+    if (nlpos != -1) {
+      this.buffer += chunk.toString().substring(0, nlpos + 1);
+      this.statusBar?.clear();
+      process.stdout.write(this.buffer);
+      this.statusBar?.render();
+      this.buffer = "";
+      chunk = chunk.toString().substring(nlpos + 1);
+      if (chunk.length > 0) return this._transform(chunk, encoding, callback)
+    } else {
+      this.buffer += chunk.toString();
     }
     callback();
+  }
+  _flush(callback) {
+    if (this.buffer.length > 0) {
+      this.statusBar?.clear();
+      process.stdout.write(this.buffer + "\n");
+      this.statusBar?.render();
+    }
   }
 }
 
@@ -78,8 +94,10 @@ async function main(opts) {
     let statusBar = null;
     if (opts.output === '-' && process.stdout.isTTY) {
       statusBar = new StatusBar();
-      statusBar.enable();
-      agent.signal.on('status', (str) => statusBar.update(str));
+      agent.signal.on('status', (str) => {
+        statusBar.setValue(str)
+        statusBar.render();
+      });
     } else {
       agent.signal.on('status', (str) => process.stderr.write(`[STATUS] ${str}\n`));
     }
@@ -139,7 +157,6 @@ async function main(opts) {
           await executeTask(agent, stdinContent, output);
         } else {
           // Interactive mode
-          if (statusBar) statusBar.disable();
           const rl = readline.createInterface({
             input: process.stdin,
             output: process.stdout
@@ -154,32 +171,41 @@ async function main(opts) {
 
           try {
             let lines = [];
+            if (statusBar) statusBar.disable();
             for await (const l of rl) {
               if (l.startsWith('@')) {
                 try {
                   const result = await registry.execute(l, agent, lines);
                   agent.Status(result);
+                  console.error(result);
                   updatePrompt();
                 } catch (e) {
                   agent.Status(`Command error: ${e.message}`);
+                  console.error(`Command error: ${e.message}`);
                 }
                 rl.prompt();
                 continue;
               }
               if (l.trim() === '') {
-                lines.pop();
                 if (lines.length > 0) {
+
+                  if (statusBar) statusBar.enable();
                   await executeTask(agent, lines.join("\n"), output);
                   lines = [];
                   rl.prompt();
+
+                  if (statusBar) statusBar.disable();
                   continue;
-                } else break;
+                } else {
+                  console.log("No input... BREAKING")
+                  if (statusBar) statusBar.enable();
+                  break;
+                }
               }
               lines.push(l);
             }
           } finally {
             rl.close();
-            if (statusBar) statusBar.enable();
           }
         }
       } catch (error) {
