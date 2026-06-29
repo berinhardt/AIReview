@@ -1,13 +1,13 @@
 import fs from 'fs';
 import path from 'path';
-import { runGitCommand, checkGitRepo } from '../../core/System.js';
+import { runGitCommand, checkGitRepo, SanitizePath } from '../../core/System.js';
 
 /**
  * @param {string} filename
  * @returns {string}
  */
-export function GitDiff(filename) {
-  const absolutePath = path.resolve(filename);
+export function GitDiff({ filename }, ENV) {
+  const absolutePath = SanitizePath(filename, ENV.cwd);
   const dir = path.dirname(absolutePath);
 
   checkGitRepo(dir);

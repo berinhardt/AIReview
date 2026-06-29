@@ -1,10 +1,11 @@
-import { runGitCommand, checkGitRepo } from '../../core/System.js';
+import { runGitCommand, checkGitRepo, SanitizePath } from '../../core/System.js';
 
 /**
  * @param {string} dir
  * @returns {{Added: string[], Removed: string[], Modified: string[]}}
  */
-export function GitStatus(dir) {
+export function GitStatus({ dir }, ENV) {
+  dir = SanitizePath(dir, ENV.cwd);
   checkGitRepo(dir);
 
   const output = runGitCommand(['status', '--porcelain'], dir);

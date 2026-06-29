@@ -107,36 +107,36 @@ export function validateNonNegativeInteger(value, defaultValue) {
 }
 
 export function runGitCommand(args, cwd = process.cwd()) {
-    try {
-        return execFileSync('git', args, { cwd, encoding: 'utf8' });
-    } catch (error) {
-        if (error.code === 'ENOENT') {
-            throw new Error('Git command not found');
-        }
-        if (error.code === 'EACCES') {
-            throw new Error('Permission denied');
-        }
-        if (error.stderr) {
-            const stderr = error.stderr.toString();
-            if (stderr.includes('not a git repository')) {
-                throw new Error('Not a git repository');
-            }
-            throw new Error(`Git command failed: ${stderr.trim()}`);
-        }
-        throw error;
+  try {
+    return execFileSync('git', args, { cwd, encoding: 'utf8' });
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      throw new Error('Git command not found');
     }
+    if (error.code === 'EACCES') {
+      throw new Error('Permission denied');
+    }
+    if (error.stderr) {
+      const stderr = error.stderr.toString();
+      if (stderr.includes('not a git repository')) {
+        throw new Error('Not a git repository');
+      }
+      throw new Error(`Git command failed: ${stderr.trim()}`);
+    }
+    throw error;
+  }
 }
 
 export function checkGitRepo(dir) {
-    if (!fs.existsSync(dir)) {
-        throw new Error('File not found');
+  if (!fs.existsSync(dir)) {
+    throw new Error('File not found');
+  }
+  try {
+    runGitCommand(['rev-parse', '--is-inside-work-tree'], dir);
+  } catch (error) {
+    if (error.message === 'Not a git repository') {
+      throw error;
     }
-    try {
-        runGitCommand(['rev-parse', '--is-inside-work-tree'], dir);
-    } catch (error) {
-        if (error.message === 'Not a git repository') {
-            throw error;
-        }
-        throw new Error('Not a git repository');
-    }
+    throw new Error('Not a git repository');
+  }
 }

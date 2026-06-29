@@ -23,16 +23,16 @@ export async function ListFiles({ path: targetPath, recursive = false }, ENV) {
 
       for (const entry of entries) {
         if (files.length >= MAX_FILES_RETURNED) break;
-        if (entry.name.startsWith('.')) continue;
+        const hidden = entry.name.startsWith('.');
 
         const fullPath = path.join(currentPath, entry.name);
         const relPath = path.join(relativePath, entry.name);
 
-        if (entry.isDirectory()) {
+        if (entry.isDirectory() && !hidden) {
           if (recursive) {
             await traverse(fullPath, relPath);
           }
-        } else if (entry.isFile()) {
+        } else if (!entry.isSymbolicLink()) {
           files.push(relPath);
         }
       }
@@ -43,7 +43,6 @@ export async function ListFiles({ path: targetPath, recursive = false }, ENV) {
     } else {
       const entries = await fs.readdir(sanitizedPath, { withFileTypes: true });
       for (const entry of entries) {
-        if (entry.name.startsWith('.')) continue;
         if (entry.isFile() || entry.isDirectory()) {
           files.push(entry.name);
         }

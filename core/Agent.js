@@ -39,6 +39,7 @@ export class Agent {
   }
   Task(input, depth = 0, outputStream = null) {
     const stream = outputStream || new PassThrough();
+    stream.setMaxListeners(20);
     const myAgent = this;
     myAgent.Status(`Queueing TASK (depth: ${depth})`);
     const result = myAgent.llm.request(myAgent.personality, input, {
