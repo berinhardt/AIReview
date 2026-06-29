@@ -8,7 +8,7 @@ export const ReviewResult = async (param, env) => {
 
 ReviewResult.TOOLDEF = {
    type: 'function',
-   name: 'ReviewResult',
+   name: 'ReviewTools_ReviewResult',
    description: 'Record a review decision (accepted or rejected).',
    parameters: {
       type: 'object',
