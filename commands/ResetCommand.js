@@ -1,17 +1,17 @@
 import { Command } from "./Command.js";
 
-export class RestartCommand extends Command {
+export class ResetCommand extends Command {
     constructor() {
-        super("RESTART");
+        super("RESET");
         this.META = {
-            name: "RESTART",
-            description: "Restart the agent session",
+            name: "RESET",
+            description: "Reset the agent session",
             arguments: []
         };
     }
 
     async execute(args, agent, promptBuffer) {
         agent.restart();
-        return "Agent restarted.";
+        return "Agent reset.";
     }
 }

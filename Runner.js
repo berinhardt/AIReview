@@ -12,7 +12,7 @@ import { pipeline } from "stream/promises";
 import { Transform } from "stream";
 import { CreateFile, DeleteFile, ModifyFile, ReadFile, ListFiles } from "./tools/FileTools.js";
 import { FileCommand } from "./commands/FileCommand.js";
-import { RestartCommand } from "./commands/RestartCommand.js";
+import { ResetCommand } from "./commands/ResetCommand.js";
 import { RoleCommand } from "./commands/RoleCommand.js";
 import { CommandRegistry } from "./core/CommandRegistry.js";
 
@@ -106,8 +106,8 @@ async function main(opts) {
     const registry = new CommandRegistry();
     const fileCommand = new FileCommand();
     registry.register(fileCommand);
-    const restartCommand = new RestartCommand();
-    registry.register(restartCommand);
+    const resetCommand = new ResetCommand();
+    registry.register(resetCommand);
     const roleCommand = new RoleCommand();
     registry.register(roleCommand);
 
