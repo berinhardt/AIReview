@@ -40,18 +40,8 @@ export class Agent {
     return this.personalityName;
   }
   Task(input, depth = 0, outputStream = null) {
-    const internalStream = new PassThrough();
-    internalStream.setMaxListeners(20);
-    
-    if (outputStream) {
-        pipeline(internalStream, outputStream, { end: false }).catch((err) => {
-            this.Log(`Pipeline error: ${err.message}\n`);
-            if (!internalStream.destroyed)
-                internalStream.emit("error", err);
-        });
-    }
-    
-    const stream = outputStream || internalStream;
+    const stream = outputStream || new PassThrough();
+    stream.setMaxListeners(20);
     const myAgent = this;
     myAgent.Status(`Queueing TASK (depth: ${depth})`);
     const result = myAgent.llm.request(myAgent.personality, input, {
@@ -116,16 +106,16 @@ export class Agent {
             if (myAgent.id !== null) {
               myAgent.llm.abort(myAgent.id);
             }
-            if (!internalStream.destroyed) {
-              internalStream.emit("error", err);
-              internalStream.end();
+            if (!stream.destroyed) {
+              stream.emit("error", err);
+              stream.end();
             }
           } else {
             setImmediate(() => myAgent.Task(chained, depth + 1, stream));
           }
         } else {
-          if (!internalStream.destroyed) {
-            internalStream.end();
+          if (!stream.destroyed) {
+            stream.end();
           }
         }
       })();
@@ -136,12 +126,12 @@ export class Agent {
         cb(null, chunk);
       }
     });
-    pipeline(result, logpipe, internalStream, { end: false }).catch((err) => {
+    pipeline(result, logpipe, stream, { end: false }).catch((err) => {
       myAgent.Log(`Pipeline error: ${err.message}\n`);
-      if (!internalStream.destroyed)
-        internalStream.emit("error", err);
+      if (!stream.destroyed)
+        stream.emit("error", err);
     });
-    return internalStream;
+    return stream;
   }
   Status(str) {
     this.signal.emit("status", str);
