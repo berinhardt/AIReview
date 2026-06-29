@@ -5,11 +5,10 @@ export class Command {
 
     /**
      * @param {string[]} args
-     * @param {object} agent
-     * @param {string[]} promptBuffer
+     * @param {object} config
      * @returns {Promise<string>}
      */
-    async execute(args, agent, promptBuffer) {
+    async execute(args, config) {
         throw new Error("Method 'execute()' must be implemented.");
     }
 }

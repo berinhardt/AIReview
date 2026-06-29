@@ -17,11 +17,11 @@ export class FileCommand extends Command {
 
     /**
      * @param {object} args
-     * @param {object} agent
-     * @param {string[]} promptBuffer
+     * @param {object} config
      */
-    async execute(args, agent, promptBuffer) {
+    async execute(args, config) {
         const { filename } = args;
+        const { promptBuffer } = config;
         if (!filename) {
             throw new Error("Usage: @FILE <filename>");
         }

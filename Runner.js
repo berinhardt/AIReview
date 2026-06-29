@@ -186,7 +186,8 @@ async function main(opts) {
             for await (const l of rl) {
               if (l.startsWith('@')) {
                 try {
-                  const result = await registry.execute(l, agent, lines);
+                  const config = { agent, promptBuffer: lines, outputStream: output, statusBar };
+                  const result = await registry.execute(l, config);
                   agent.Status(result);
                   console.error(result);
                   updatePrompt();

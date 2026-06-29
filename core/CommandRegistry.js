@@ -14,7 +14,7 @@ export class CommandRegistry {
         this.commands.set(name, command);
     }
 
-    async execute(inputString, ...context) {
+    async execute(inputString, config) {
         if (!inputString.startsWith('@')) {
             throw new Error("Input must start with '@'.");
         }
@@ -29,7 +29,7 @@ export class CommandRegistry {
         }
 
         const parsedArgs = this._parseArguments(command.META.arguments, rawArgs);
-        return await command.execute(parsedArgs, ...context);
+        return await command.execute(parsedArgs, config);
     }
 
     _parseArguments(argDefinitions, rawArgs) {

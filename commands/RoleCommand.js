@@ -13,7 +13,7 @@ export class RoleCommand extends Command {
     };
   }
 
-  async execute(args, agent, promptBuffer) {
+  async execute(args, config) {
     const filename = args.filename;
     if (!filename) {
       throw "Error: Filename required.";
@@ -22,7 +22,7 @@ export class RoleCommand extends Command {
     // The requirement says "relative to the current working directory (CWD)"
     const filePath = path.resolve(process.cwd(), filename);
 
-    await agent.setPersonality(filePath);
+    await config.agent.setPersonality(filePath);
     return `Role loaded successfully from ${filename}.`;
   }
 }

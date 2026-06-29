@@ -20,7 +20,7 @@ export class TaskCommand extends Command {
         this.fileCommand = new FileCommand();
     }
 
-    async execute(args, agent, promptBuffer) {
+    async execute(args, config) {
         // args is { arg1, arg2, arg3 }
         const rawArgs = [args.arg1, args.arg2, args.arg3].filter(a => a !== "");
         
@@ -64,8 +64,8 @@ export class TaskCommand extends Command {
         // Execution
         if (newFlag) {
             try {
-                agent.Status("Executing @RESET...");
-                await this.resetCommand.execute({}, agent, promptBuffer);
+                config.agent.Status("Executing @RESET...");
+                await this.resetCommand.execute({}, config);
             } catch (e) {
                 throw new Error(`@RESET command failed: ${e.message}`);
             }
@@ -73,16 +73,16 @@ export class TaskCommand extends Command {
         
         if (role) {
             try {
-                agent.Status(`Executing @ROLE ${role}...`);
-                await this.roleCommand.execute({ filename: role }, agent, promptBuffer);
+                config.agent.Status(`Executing @ROLE ${role}...`);
+                await this.roleCommand.execute({ filename: role }, config);
             } catch (e) {
                 throw new Error(`@ROLE command failed: ${e.message}`);
             }
         }
         
         try {
-            agent.Status(`Executing @FILE ${task}...`);
-            await this.fileCommand.execute({ filename: task }, agent, promptBuffer);
+            config.agent.Status(`Executing @FILE ${task}...`);
+            await this.fileCommand.execute({ filename: task }, config);
         } catch (e) {
             throw new Error(`@FILE command failed: ${e.message}`);
         }
