@@ -16,6 +16,7 @@ export class Agent {
     this.signal = new EventEmitter();
     this.tools = new AgentToolkit(chroot);
     this.maxRecursionDepth = maxRecursionDepth;
+    this.logger.setMaxListeners(20);
   }
   addTools(ary) {
     for (const t of ary) this.tools.add(t);
