@@ -42,8 +42,6 @@ function GeminiLLMRequest(model, SystemPrompt, Input, config = {}) {
           thinking_level: thinking_level
         },
       }
-      stream.emit("request", request);
-      console.log("PreviousInteractionID", request.previous_interaction_id);
       const interaction = await client.interactions.create(request);
       let DeltaHandler = null;
       for await (const data of interaction) {
