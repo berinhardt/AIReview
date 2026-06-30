@@ -19,6 +19,7 @@ import { RoleCommand } from "./commands/RoleCommand.js";
 import { TaskCommand } from "./commands/TaskCommand.js";
 import { DevLoopCommand } from "./commands/DevLoopCommand.js";
 import { CommandRegistry } from "./core/CommandRegistry.js";
+import { OutputHandler } from "./core/OutputHandler.js";
 
 program.version("0.2.0")
    .option('-p, --personality <personality>', 'AI personality file', null)
@@ -43,36 +44,6 @@ async function executeTask(agent, task, output) {
    await pipeline(stream, appendCost, output, { end: false });
 }
 
-class SafeStdout extends Transform {
-   constructor(statusBar) {
-      super();
-      this.statusBar = statusBar;
-      this.buffer = "";
-   }
-
-   _transform(chunk, encoding, callback) {
-      const nlpos = chunk.indexOf("\n");
-      if (nlpos != -1) {
-         this.buffer += chunk.toString().substring(0, nlpos + 1);
-         this.statusBar?.clear();
-         process.stdout.write(this.buffer);
-         this.statusBar?.render();
-         this.buffer = "";
-         chunk = chunk.toString().substring(nlpos + 1);
-         if (chunk.length > 0) return this._transform(chunk, encoding, callback)
-      } else {
-         this.buffer += chunk.toString();
-      }
-      callback();
-   }
-   _flush(callback) {
-      if (this.buffer.length > 0) {
-         this.statusBar?.clear();
-         process.stdout.write(this.buffer + "\n");
-         this.statusBar?.render();
-      }
-   }
-}
 
 async function main(opts) {
    let LOGFILE;
@@ -125,7 +96,7 @@ async function main(opts) {
       let output;
       if (opts.output === '-') {
          if (statusBar) {
-            output = new SafeStdout(statusBar);
+            output = new OutputHandler(statusBar);
          } else {
             output = process.stdout;
          }
