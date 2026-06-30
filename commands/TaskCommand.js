@@ -3,16 +3,23 @@ import { ResetCommand } from "./ResetCommand.js";
 import { RoleCommand } from "./RoleCommand.js";
 import { FileCommand } from "./FileCommand.js";
 
+/**
+ * Command to chain RESET, ROLE, and FILE commands.
+ * @extends Command
+ */
 export class TaskCommand extends Command {
+    /**
+     * @property {CommandMeta} META
+     */
     constructor() {
         super("TASK");
         this.META = {
             name: "TASK",
             description: "Chain RESET, ROLE, and FILE commands",
             arguments: [
-                { type: "string", name: "arg1" },
-                { type: "string", name: "arg2" },
-                { type: "string", name: "arg3" }
+                { type: "string", name: "arg1", description: "Optional 'new' flag, role, or task file." },
+                { type: "string", name: "arg2", description: "Optional role or task file." },
+                { type: "string", name: "arg3", description: "Optional task file." }
             ]
         };
         this.resetCommand = new ResetCommand();
@@ -20,6 +27,18 @@ export class TaskCommand extends Command {
         this.fileCommand = new FileCommand();
     }
 
+    /**
+     * Executes the task command.
+     * @description Chains RESET, ROLE, and FILE commands based on the provided arguments.
+     * @param {Object} args - The arguments for the command.
+     * @param {string} args.arg1 - The first argument.
+     * @param {string} args.arg2 - The second argument.
+     * @param {string} args.arg3 - The third argument.
+     * @param {Object} config - The configuration object.
+     * @param {Object} config.agent - The agent instance.
+     * @returns {Promise<string>} A success message indicating the task was initiated.
+     * @throws {Error} If the arguments are invalid or any of the chained commands fail.
+     */
     async execute(args, config) {
         // args is { arg1, arg2, arg3 }
         const rawArgs = [args.arg1, args.arg2, args.arg3].filter(a => a !== "");
