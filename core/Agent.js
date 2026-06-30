@@ -5,7 +5,16 @@ import { pipeline } from "stream/promises";
 import { AgentToolkit } from "./AgentToolkit.js";
 import { EventEmitter } from "events";
 
+/**
+ * Represents an AI Agent capable of performing tasks using tools and LLMs.
+ */
 export class Agent {
+   /**
+    * Creates an instance of Agent.
+    * @param {Object} llm - The LLM interface to use.
+    * @param {string} [chroot=""] - The root directory for tool operations.
+    * @param {number} [maxRecursionDepth=100] - The maximum depth for recursive task execution.
+    */
    constructor(llm, chroot = "", maxRecursionDepth = 100) {
       this.llm = llm;
       this.personality = null;
@@ -19,21 +28,45 @@ export class Agent {
       this.maxRecursionDepth = maxRecursionDepth;
       this.logger.setMaxListeners(20);
    }
+   /**
+    * Adds tools to the agent's toolkit.
+    * @param {Array} ary - An array of tools to add.
+    */
    addTools(ary) {
       for (const t of ary) this.tools.add(t);
    }
+   /**
+    * Resets the agent's state, clearing the interaction ID and notes.
+    */
    restart() {
       this.id = null;
       this.notes = {};
    }
+   /**
+    * Sets the agent's personality from a markdown file.
+    * @param {string} personalityInput - The path to the personality markdown file.
+    * @returns {Promise<void>}
+    */
    async setPersonality(personalityInput) {
       const content = await readFile(personalityInput, "utf8");
       this.personality = content;
       this.personalityName = path.basename(personalityInput, ".md");
    }
+   /**
+    * Gets the name of the current personality.
+    * @returns {string} The personality name.
+    */
    getPersonalityName() {
       return this.personalityName;
    }
+   /**
+    * Executes a task using the LLM and tools.
+    * Returns a PassThrough stream immediately, while processing happens asynchronously via event listeners.
+    * @param {Object|Array} input - The input for the task.
+    * @param {number} [depth=0] - The current recursion depth.
+    * @param {PassThrough} [outputStream=null] - An optional output stream.
+    * @returns {PassThrough} A stream that will emit the task output.
+    */
    Task(input, depth = 0, outputStream = null) {
       const stream = outputStream || new PassThrough();
       stream.setMaxListeners(20);
@@ -128,10 +161,18 @@ export class Agent {
       });
       return stream;
    }
+   /**
+    * Emits a status update and logs it.
+    * @param {string} str - The status message.
+    */
    Status(str) {
       this.signal.emit("status", str);
       this.Log(`[STATUS] ${str}\n`);
    }
+   /**
+    * Logs data to the agent's logger.
+    * @param {string|Object} data - The data to log.
+    */
    Log(data) {
       this.logger.write(typeof data === "string" ? data : JSON.stringify(data));
    }
