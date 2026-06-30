@@ -2,6 +2,16 @@ import fs from "fs/promises"
 import path from "path"
 import { SanitizePath } from "../../core/System.js";
 
+/**
+ * Creates a new local file.
+ *
+ * @param {Object} params - The parameters for creating the file.
+ * @param {string} params.filename - The relative path of the file to create (e.g., "src/index.html").
+ * @param {string} params.content - The UTF8 content to write to the file.
+ * @param {Object} ENV - The environment context.
+ * @param {string} ENV.cwd - The current working directory.
+ * @returns {Promise<{result: string, error?: string}>} A promise that resolves to an object indicating success or failure.
+ */
 export async function CreateFile({ filename, content }, ENV) {
    try {
       const targetPath = await SanitizePath(filename, ENV.cwd);

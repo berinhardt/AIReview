@@ -1,6 +1,15 @@
 import fs from "fs/promises"
 import { SanitizePath } from "../../core/System.js";
 
+/**
+ * Reads a local file's content.
+ *
+ * @param {Object} params - The parameters for reading the file.
+ * @param {string} params.filename - The relative path of the file (e.g., "src/index.html").
+ * @param {Object} ENV - The environment context.
+ * @param {string} ENV.cwd - The current working directory.
+ * @returns {Promise<{content: string | null, error?: string}>} A promise that resolves to an object containing the file content or an error message.
+ */
 export async function ReadFile({ filename }, ENV) {
    try {
       const targetPath = await SanitizePath(filename, ENV.cwd);

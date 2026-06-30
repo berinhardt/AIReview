@@ -1,6 +1,17 @@
 import fs from "fs/promises"
 import { SanitizePath, acquireLock, releaseLock } from "../../core/System.js";
 
+/**
+ * Modifies a local file by performing a unique search & replace operation.
+ *
+ * @param {Object} params - The parameters for modifying the file.
+ * @param {string} params.filename - The relative path of the file (e.g., "src/index.html").
+ * @param {string} params.search - The original code to search for.
+ * @param {string} params.replace - The replacement code.
+ * @param {Object} ENV - The environment context.
+ * @param {string} ENV.cwd - The current working directory.
+ * @returns {Promise<{result: string, error?: string}>} A promise that resolves to an object indicating success or failure.
+ */
 export async function ModifyFile({ filename, search, replace }, ENV) {
   const targetPath = await SanitizePath(filename, ENV.cwd);
   const lockPath = targetPath + ".lock";

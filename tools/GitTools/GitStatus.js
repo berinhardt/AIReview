@@ -1,9 +1,15 @@
 import { runGitCommand, checkGitRepo, SanitizePath } from '../../core/System.js';
 
 /**
- * @param {string} dir
- * @param {string} [revision]
- * @returns {{Added: string[], Removed: string[], Modified: string[]} | {error: string}}
+ * Gets a structured list of added, removed, and modified files in a directory.
+ *
+ * @param {Object} params - The parameters for getting the git status.
+ * @param {string} params.dir - The directory path to check.
+ * @param {string} [params.revision] - Optional revision (branch, commit, tag) to compare against.
+ * @param {Object} ENV - The environment context.
+ * @param {string} ENV.cwd - The current working directory.
+ * @returns {Promise<{Added: string[], Removed: string[], Modified: string[]} | {error: string}>} A promise that resolves to an object containing the lists of files, or an error object if the revision is invalid.
+ * @throws {Error} Throws an error if the git command fails.
  */
 export async function GitStatus({ dir, revision }, ENV) {
   dir = await SanitizePath(dir, ENV.cwd);
