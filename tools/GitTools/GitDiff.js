@@ -27,7 +27,7 @@ export async function GitDiff({ filename, revision }, ENV) {
       if (revision) {
          return { result: runGitCommand(['diff', revision, '--', filename], dir) };
       } else {
-         return { result: runGitCommand(['diff', filename], dir) };
+         return { result: runGitCommand(['diff', '--', filename], dir) };
       }
    } catch (error) {
       if (revision && (error.message.includes('ambiguous argument') || error.message.includes('bad revision'))) {

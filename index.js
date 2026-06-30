@@ -1,4 +1,3 @@
-import { StatusBar } from './core/StatusBar.js';
 import "dotenv/config";
 import { readFile } from "fs/promises";
 import readline from 'readline/promises';
@@ -23,7 +22,7 @@ import { OutputHandler } from "./core/OutputHandler.js";
 
 program.version("0.2.0")
    .option('-p, --personality <personality>', 'AI personality file', null)
-   .option('-t, --task <task>', 'Task file', (val, memo) => [...memo, val], [])
+   .option('-t, --task <task>', 'Task file', (val, memo) => [...memo, val], ["-"])
    .option('-m, --model <model>', 'AI model to use', "Google.Gemini31FlashLite")
    .option('-d, --chroot <dir>', 'Exposed root of paths to AI', "sandbox")
    .option('-o, --output <output>', 'Output file', '-')
@@ -69,57 +68,16 @@ async function main(opts) {
          ReviewResult]);
       agent.logger.pipe(LOGFILE);
 
-      let statusBar = null;
-      if (opts.output === '-' && process.stdout.isTTY) {
-         statusBar = new StatusBar();
-         agent.signal.on('status', (str) => {
-            statusBar.setValue(str)
-            statusBar.render();
-         });
-      } else {
-         agent.signal.on('status', (str) => process.stderr.write(`[STATUS] ${str}\n`));
-      }
-
       // Command Registry
       const registry = new CommandRegistry();
-      const fileCommand = new FileCommand();
-      registry.register(fileCommand);
-      const resetCommand = new ResetCommand();
-      registry.register(resetCommand);
-      const roleCommand = new RoleCommand();
-      registry.register(roleCommand);
-      const taskCommand = new TaskCommand();
-      registry.register(taskCommand);
-      const devLoopCommand = new DevLoopCommand();
-      registry.register(devLoopCommand);
+      registry.register(new FileCommand());
+      registry.register(new ResetCommand());
+      registry.register(new RoleCommand());
+      registry.register(new TaskCommand());
+      registry.register(new DevLoopCommand());
 
-      let output;
-      if (opts.output === '-') {
-         if (statusBar) {
-            output = new OutputHandler(statusBar);
-         } else {
-            output = process.stdout;
-         }
-      } else {
-         output = createWriteStream(opts.output, { encoding: "utf8" });
-      }
-
-      let rawTasks = opts.task.length === 0 ? ['-'] : opts.task;
-      const tasks = [];
-      for (const task of rawTasks) {
-         if (task === "-") {
-            tasks.push(task);
-         } else if (task && task.trim() !== "") {
-            const { valid, error } = await ValidateFile(task);
-            if (valid) {
-               tasks.push(task);
-            } else {
-               agent.Status(`Skipping invalid task '${task}': ${error}`);
-            }
-         } else {
-            agent.Status(`Skipping empty task entry`);
-         }
-      }
+      let output = new OutputHandler(opts.output === '-' ? process.stdout : createWriteStream(opts.output, { encoding: "utf8" }));
+      agent.signal.on('status', (str) => output.setStatus(str));
 
       let cachedStdin = null;
       const getStdin = async () => {
@@ -128,12 +86,17 @@ async function main(opts) {
          }
          return cachedStdin;
       };
-
+      const tasks = opts.task;
       for (const task of tasks) {
          try {
             if (task !== "-") {
-               const taskContent = await readFile(task, "utf8");
-               await executeTask(agent, taskContent, output);
+               const { valid, error } = await ValidateFile(task);
+               if (valid) {
+                  const taskContent = await readFile(task, "utf8");
+                  await executeTask(agent, taskContent, output);
+               } else {
+                  agent.Status(`Invalid task ${task}`);
+               }
             } else if (!process.stdin.isTTY) {
                const stdinContent = await getStdin();
                await executeTask(agent, stdinContent, output);
@@ -153,11 +116,11 @@ async function main(opts) {
 
                try {
                   let lines = [];
-                  if (statusBar) statusBar.disable();
+                  output.showStatusBar(false);
                   for await (const l of rl) {
                      if (l.startsWith('@')) {
                         try {
-                           const config = { agent, promptBuffer: lines, outputStream: output, statusBar };
+                           const config = { agent, promptBuffer: lines, outputStream: output };
                            const result = await registry.execute(l, config);
                            agent.Status(result);
                            console.error(result);
@@ -168,20 +131,16 @@ async function main(opts) {
                         }
                         rl.prompt();
                         continue;
-                     }
-                     if (l.trim() === '') {
+                     } else if (l.trim() === '') {
                         if (lines.length > 0) {
-
-                           if (statusBar) statusBar.enable();
+                           output.showStatusBar(true);
                            await executeTask(agent, lines.join("\n"), output);
+                           output.showStatusBar(false);
                            lines = [];
                            rl.prompt();
-
-                           if (statusBar) statusBar.disable();
                            continue;
                         } else {
-                           console.log("No input... BREAKING")
-                           if (statusBar) statusBar.enable();
+                           output.showStatusBar(true);
                            break;
                         }
                      }
@@ -195,7 +154,7 @@ async function main(opts) {
             agent.Status(`Error executing task ${task}: ${error.message}`);
          }
       }
-      if (output != process.stdout && !output.closed) output.end();
+      output.end();
    } catch (error) {
       console.error(error);
       process.exit(1);

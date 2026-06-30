@@ -7,9 +7,9 @@ import fs from "fs";
 import { Dirname, LoadLLMModel, checkGitRepo } from './core/System.js';
 import { Agent } from './core/Agent.js'
 import { createWriteStream } from "fs";
-import { StatusBar } from "./core/StatusBar.js";
 import { ReadFile, ListFiles } from "./tools/FileTools.js";
 import { GitStatus, GitDiff } from "./tools/GitTools.js";
+import { OutputHandler } from "./core/OutputHandler.js";
 
 program.version("0.2.0")
    .argument('<repo>', 'Git Repo Path')
@@ -20,8 +20,6 @@ program.version("0.2.0")
    .parse(process.argv);
 
 async function main(repo, opts) {
-   const statusBar = new StatusBar();
-   statusBar.enable();
 
    try {
       // Validate repo path
@@ -37,14 +35,12 @@ async function main(repo, opts) {
 
       const model = await LoadLLMModel(opts.model);
 
-      statusBar.setValue("Initializing Agent...");
       const agent = new Agent(model, absoluteRepoPath);
       const reviewerPersonalityPath = path.join(Dirname(import.meta.url), "prompts", "Reviewer.md");
       await agent.setPersonality(reviewerPersonalityPath, true);
 
       agent.addTools([ReadFile, ListFiles, GitStatus, GitDiff]);
 
-      agent.signal.on('status', (s) => statusBar.setValue(s));
 
       const prompt = `
       Your task is to review the changes in the repository against ${opts.revision}.
@@ -56,21 +52,20 @@ async function main(repo, opts) {
 
       const stream = agent.Task(prompt);
 
-      statusBar.setValue("Connecting to AI...");
       const appendCost = new Transform({
          transform(chunk, encoding, cb) { cb(null, chunk); },
          flush(cb) { this.push(`\n\nUSD ${agent.cost}\n`); cb(); }
       });
-      const output = opts.output == "-" ? process.stdout : createWriteStream(opts.output, { encoding: "utf8" });
+      const output = new OutputHandler(opts.output == "-" ? process.stdout : createWriteStream(opts.output, { encoding: "utf8" }));
+      agent.signal.on("status", (s) => output.setStatus(s));
       try {
          await pipeline(stream, appendCost, output, { end: false });
       } finally {
-         if (output != process.stdout && !output.closed) output.end();
+         output.end();
       }
    } catch (error) {
       console.error(`\nError: ${error.message}`);
       process.exit(1);
    } finally {
-      statusBar.disable();
    }
 }
