@@ -118,6 +118,7 @@ export class Agent {
                      result: [{ type: 'text', text: null }]
                   };
                   try {
+                     stream.push(`[TOOL CALL] ${data.name} ${JSON.stringify(data.param)}\n`);
                      let t = await myAgent.tools.call(data.name, data.param, myAgent);
                      response.result = t;
                   } catch (error) {

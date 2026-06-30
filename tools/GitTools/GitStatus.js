@@ -12,33 +12,29 @@ import { runGitCommand, checkGitRepo, SanitizePath } from '../../core/System.js'
  * @throws {Error} Throws an error if the git command fails.
  */
 export async function GitStatus({ dir, revision }, ENV) {
-  dir = await SanitizePath(dir, ENV.cwd);
-  checkGitRepo(dir);
+   dir = await SanitizePath(dir, ENV.cwd);
+   checkGitRepo(dir);
 
-  let output;
-  try {
-    if (revision) {
-      output = runGitCommand(['diff', '--name-status', revision], dir);
-    } else {
-      output = runGitCommand(['status', '--porcelain'], dir);
-    }
-  } catch (error) {
-    if (revision && (error.message.includes('ambiguous argument') || error.message.includes('bad revision'))) {
-      return { error: 'invalid rev' };
-    }
-    throw error;
-  }
+   let output;
+   try {
+      output = runGitCommand(['diff', '-b', '--find-renames', '--cached', '--name-status', revision || "HEAD"], dir);
+   } catch (error) {
+      if (revision && (error.message.includes('ambiguous argument') || error.message.includes('bad revision'))) {
+         return { error: 'invalid revision' };
+      } else {
+         return { error: error.message };
+      }
+   }
 
-  const lines = output.trim().split('\n').filter(line => line.length > 0);
+   const lines = output.split('\n').filter(line => line.length > 0);
 
-  const status = {
-    Added: [],
-    Removed: [],
-    Modified: []
-  };
+   const status = {
+      Added: [],
+      Removed: [],
+      Modified: []
+   };
 
-  for (const line of lines) {
-    if (revision) {
+   for (const line of lines) {
       // git diff --name-status <revision>
       // Format: [Status]\t[File]
       const parts = line.split('\t');
@@ -48,38 +44,29 @@ export async function GitStatus({ dir, revision }, ENV) {
       if (code === 'A') status.Added.push(file);
       else if (code === 'D') status.Removed.push(file);
       else if (code === 'M') status.Modified.push(file);
-    } else {
-      // git status --porcelain
-      // Format: [Code] [File]
-      const code = line.substring(0, 2);
-      const file = line.substring(3);
+      else if (code.indexOf("R") == 0) status.Modified.push(parts[2]);
+      else console.error("UNK CODE", code, parts);
+   }
 
-      if (code.includes('A')) status.Added.push(file);
-      else if (code.includes('D')) status.Removed.push(file);
-      else if (code.includes('M')) status.Modified.push(file);
-      else if (code === '??') status.Added.push(file); // Untracked files
-    }
-  }
-
-  return status;
+   return status;
 }
 
 GitStatus.TOOLDEF = {
-  type: 'function',
-  name: 'GitStatus',
-  description: 'Get a structured list of added, removed, and modified files in a directory.',
-  parameters: {
-    type: 'object',
-    properties: {
-      dir: {
-        type: 'string',
-        description: 'The directory path to check.'
+   type: 'function',
+   name: 'GitTools_GitStatus',
+   description: 'Get a structured list of added, removed, and modified staged files in a directory.',
+   parameters: {
+      type: 'object',
+      properties: {
+         dir: {
+            type: 'string',
+            description: 'The directory path to check.'
+         },
+         revision: {
+            type: 'string',
+            description: 'Optional revision (branch, commit, tag) to compare against.'
+         }
       },
-      revision: {
-        type: 'string',
-        description: 'Optional revision (branch, commit, tag) to compare against.'
-      }
-    },
-    required: ['dir']
-  }
+      required: ['dir']
+   }
 };

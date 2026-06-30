@@ -16,7 +16,7 @@ export class DevLoopCommand extends Command {
 
    async execute(args, config) {
       const { featureFile } = args;
-      const { agent, statusBar, outputStream } = config;
+      const { agent, outputStream } = config;
       if (!featureFile) {
          return "Error: Missing <Feature-File> argument.";
       }
@@ -43,7 +43,7 @@ export class DevLoopCommand extends Command {
          await pipeline(stream, outputStream, { end: false });
       };
 
-      statusBar?.enable();
+      outputStream.showStatusBar(true);
       try {
          agent.notes.reviewAccepted = false;
          while (iteration <= MAX_LOOP_ITERATIONS) {
@@ -78,15 +78,12 @@ export class DevLoopCommand extends Command {
                   // Optional, ignore
                }
             }
-            console.log("WILL RUN CODER TASK");
             await runTask(coderPersonality, coderTask);
-            console.log("DID RUN CODER TASK");
 
             // 2. Reviewer
             agent.Status("--- Reviewer ---");
             agent.restart();
             const reviewerTask = await readFile(absoluteFeatureFile, 'utf8');
-            console.log("WILL RUN REVIEWER TASK");
             await runTask(reviewerPersonality, reviewerTask);
 
             if (agent.notes.reviewAccepted) {
@@ -100,10 +97,12 @@ export class DevLoopCommand extends Command {
                   input: process.stdin,
                   output: process.stdout
                });
+               outputStream.showStatusBar(false);
                const answer = await rl.question("Loop limit reached. Continue? [y/n] ");
                rl.close();
                if (answer.toLowerCase() === 'y') {
                   iteration = 1;
+                  outputStream.showStatusBar(true);
                } else {
                   return "DevLoop aborted by user.";
                }
@@ -111,10 +110,10 @@ export class DevLoopCommand extends Command {
          }
          return "DevLoop finished.";
       } catch (error) {
-         console.log(error);
+         console.error(error);
          throw error;
       } finally {
-         statusBar?.disable();
+         outputStream.showStatusBar(false);
       }
    }
 }

@@ -10,7 +10,7 @@ import { createWriteStream } from "fs";
 import { pipeline } from "stream/promises";
 import { Transform } from "stream";
 import { CreateFile, DeleteFile, ModifyFile, ReadFile, ListFiles } from "./tools/FileTools.js";
-import { GitStatus, GitDiff } from "./tools/GitTools.js";
+import { GitStatus, GitDiffFile } from "./tools/GitTools.js";
 import { ReviewResult } from "./tools/ReviewTools.js";
 import { FileCommand } from "./commands/FileCommand.js";
 import { ResetCommand } from "./commands/ResetCommand.js";
@@ -64,7 +64,7 @@ async function main(opts) {
          ModifyFile,
          ListFiles,
          GitStatus,
-         GitDiff,
+         GitDiffFile,
          ReviewResult]);
       agent.logger.pipe(LOGFILE);
 
