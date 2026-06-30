@@ -14,7 +14,7 @@ import { GitStatus, GitDiff } from "./tools/GitTools.js";
 program.version("0.2.0")
    .argument('<repo>', 'Git Repo Path')
    .option('-m, --model <model>', 'AI model to use', "Google.Gemini31FlashLite")
-   .option('-r, --revision <revision>', 'base git rev of the diff', null)
+   .option('-r, --revision <revision>', 'base git rev of the diff', "HEAD")
    .option('-o, --output <output>', 'log file', '-')
    .action(main)
    .parse(process.argv);
@@ -47,11 +47,11 @@ async function main(repo, opts) {
       agent.signal.on('status', (s) => statusBar.setValue(s));
 
       const prompt = `
-      Your task is to review the changes in the repository.
+      Your task is to review the changes in the repository against ${opts.revision}.
       
       1. Use 'ListFiles' with { "path": ".", "recursive": true } to understand the project structure.
-      2. Use 'GitStatus' with { "dir": "." } to see the status of the files.
-      3. Use 'GitDiff' with { "filename": "<file_path>", "revision": "${opts.revision || "HEAD"}" } to understand the changes for each modified file.
+      2. Use 'GitStatus' to see the status of the files.
+      3. Use 'GitDiff' to understand the changes for each modified file.
     `;
 
       const stream = agent.Task(prompt);
