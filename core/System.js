@@ -63,9 +63,8 @@ export async function SanitizePath(filename, ENV) {
     }
     if (checkPath === baseDir) break;
     checkPath = path.dirname(checkPath);
-    if (!checkPath.startsWith(baseDir)) {
+    if (!checkPath.startsWith(baseDir))
       throw new Error("Permission Denied");
-    }
   }
 
   return resolvedPath;
