@@ -22,16 +22,18 @@ export function Dirname(meta_url) {
 }
 export async function SanitizePath(filename, ENV) {
   const { notesDir, targetDir } = ENV;
-
   let baseDir;
   let relativePath;
-  if (filename[0] !== "/") filename = "/" + filename;
+  if (filename[0] != "/") filename = path.join("/", filename);
+  filename = path.normalize(filename);
 
-  if (filename.startsWith('/drive')) {
-    baseDir = targetDir;
-    relativePath = filename.substring('/drive'.length);
-  } else if (filename.startsWith('/')) {
-    baseDir = notesDir;
+  const drive = path.normalize(path.join("/", "drive"));
+
+  if (filename.startsWith(drive)) {
+    baseDir = path.normalize(targetDir);
+    relativePath = filename.substring(drive.length);
+  } else {
+    baseDir = path.normalize(notesDir);
     relativePath = filename.substring(1);
   }
 
@@ -61,6 +63,8 @@ export async function SanitizePath(filename, ENV) {
       if (e.code !== "ENOENT")
         throw new Error("Permission Denied");
     }
+
+    if (checkPath.endsWith(path.sep)) checkPath = checkPath.substring(0, checkPath.length - 1);
     if (checkPath === baseDir) break;
     checkPath = path.dirname(checkPath);
     const relative = path.relative(baseDir, checkPath);

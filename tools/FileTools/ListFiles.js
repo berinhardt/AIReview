@@ -25,10 +25,12 @@ export async function ListFiles(params, ENV) {
       try {
         const safePath = await SanitizePath(currentPath, ENV);
         const basename = path.basename(safePath);
-        const ignored = path.dirname(safePath) == '/' && !isIgnored(safePath);
+        const relative = path.relative(safePath, ENV.notesDir);
+        const ignored = basename != ".git" && (relative.startsWith("..") || path.isAbsolute(relative)) && isIgnored(safePath);
         if (!ignored) {
           const stats = await fs.lstat(safePath);
-          files.push(currentPath);
+          if (!stats.isDirectory() || !params.recursive || params.path !== currentPath)
+            files.push(currentPath);
           if (stats.isDirectory() && basename != ".git") {
             const entries = await fs.readdir(safePath, { withFileTypes: true });
             for (const entry of entries) {
@@ -43,8 +45,9 @@ export async function ListFiles(params, ENV) {
             }
           }
           if (safePath == ENV.notesDir && ENV.targetDir) {
-            files.push(path.join("drive"))
             if (params.recursive) await traverse(path.join("drive"));
+            else
+              files.push(path.join("drive"))
           }
         }
       } catch (error) {
