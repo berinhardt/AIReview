@@ -50,10 +50,13 @@ export async function SanitizePath(filename, ENV) {
 
   // Resolve path
   const resolvedPath = path.normalize(path.join(baseDir, relativePath));
+  if (!resolvedPath.startsWith(baseDir)) {
+    throw new Error("Permission Denied");
+  }
 
   // Check for symlinks in the path
   let checkPath = resolvedPath;
-  while (checkPath.startsWith(baseDir)) {
+  while (true) {
     try {
       const stats = await lstat(checkPath);
       if (stats.isSymbolicLink()) throw new Error("Permission Denied");
