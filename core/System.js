@@ -60,7 +60,7 @@ export async function SanitizePath(filename, ENV) {
       const stats = await lstat(checkPath);
       if (stats.isSymbolicLink()) throw new Error("Permission Denied");
     } catch (e) {
-      if (error.code !== "ENOENT")
+      if (e.code !== "ENOENT")
         throw new Error("Permission Denied");
     }
     if (checkPath === baseDir) break;

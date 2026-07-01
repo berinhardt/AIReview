@@ -22,8 +22,9 @@ import { GeminiNoWarn } from "./models/Google.js";
 
 program.version("0.2.0")
   .option('-p, --personality <personality>', 'AI personality file', null)
+  .option('-m, --model <model>', 'AI model name', "Google.Gemini31FlashLite")
   .option('-n, --notes-dir <dir>', 'Notes directory', "notes")
-  .option('-T, --target-dir <dir>', 'Target directory', null)
+  .option('-d, --target-dir <dir>', 'Target directory', null)
   .option('-t, --task <task>', 'Task file', (val, memo) => [...memo, val], ["-"])
   .option('-o, --output <output>', 'Output file', '-')
   .option('-l, --logfile <logfile>', 'Agent log file', 'last.log')
