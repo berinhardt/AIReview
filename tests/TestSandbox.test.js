@@ -1,7 +1,7 @@
 import { exec } from "child_process";
 import * as fs from "fs/promises";
 import { vi, describe, it, expect } from "vitest";
-describe("Test Framework Isolation", () => {
+describe("Test Sandbox Filesystem Isolation", () => {
    it('should forbid writing to disk', async () => {
       await expect(async () => fs.writeFile("TEST.md", "didn't work")).rejects.toThrow();
    })
