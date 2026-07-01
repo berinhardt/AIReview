@@ -25,8 +25,14 @@ export async function ListFiles(params, ENV) {
       try {
         const safePath = await SanitizePath(currentPath, ENV);
         const basename = path.basename(safePath);
-        const relative = path.relative(safePath, ENV.notesDir);
-        const ignored = basename != ".git" && (relative.startsWith("..") || path.isAbsolute(relative)) && isIgnored(safePath);
+        const relative = path.relative(ENV.notesDir, safePath);
+        const ignored =
+          basename != ".git"
+          && safePath != ENV.notesDir
+          && safePath != ENV.targetDir
+          && relative != ""
+          && (relative.startsWith("..") || path.isAbsolute(relative))
+          && isIgnored(safePath);
         if (!ignored) {
           const stats = await fs.lstat(safePath);
           if (!stats.isDirectory() || !params.recursive || params.path !== currentPath)
