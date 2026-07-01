@@ -64,7 +64,7 @@ export class DevLoopCommand extends Command {
 
     outputStream.showStatusBar(true);
     try {
-      const chroot = agent.tools.ENV.cwd;
+      const chroot = agent.tools.ENV.targetDir;
       agent.notes.reviewAccepted = false;
       while (iteration <= MAX_LOOP_ITERATIONS) {
         agent.Status(`Iteration ${iteration}/${MAX_LOOP_ITERATIONS}`);
