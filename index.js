@@ -53,7 +53,10 @@ async function main(opts) {
     LOGFILE = createWriteStream(opts.logfile);
     const model = await LoadLLMModel(opts.model);
     if (opts.rpmLimit) model.RPM_LIMIT = opts.rpmLimit;
-    const agent = new Agent(model, opts.chroot);
+    const agent = new Agent(model, {
+      notesDir: opts.notesDir,
+      targetDir: opts.targetDir
+    });
     if (opts.personality) {
       await agent.setPersonality(opts.personality);
     } else {

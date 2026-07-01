@@ -15,7 +15,7 @@ export class Agent {
    * @param {string} [chroot=""] - The root directory for tool operations.
    * @param {number} [maxRecursionDepth=100] - The maximum depth for recursive task execution.
    */
-  constructor(llm, notesDir = "", targetDir = "", maxRecursionDepth = 100) {
+  constructor(llm, { notesDir, targetDir, maxRecursionDepth = 100 }) {
     this.llm = llm;
     this.personality = null;
     this.personalityName = "Default";
@@ -24,7 +24,7 @@ export class Agent {
     this.notes = {};
     this.logger = new PassThrough();
     this.signal = new EventEmitter();
-    this.tools = new AgentToolkit(notesDir, targetDir);
+    this.tools = new AgentToolkit({ notesDir, targetDir });
     this.maxRecursionDepth = maxRecursionDepth;
     this.logger.setMaxListeners(20);
   }
