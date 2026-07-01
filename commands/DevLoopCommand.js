@@ -64,7 +64,8 @@ export class DevLoopCommand extends Command {
 
     outputStream.showStatusBar(true);
     try {
-      const chroot = agent.tools.ENV.targetDir;
+      const target = agent.tools.ENV.targetDir;
+      const sandbox = agent.tools.ENV.notesDir;
       agent.notes.reviewAccepted = false;
       while (iteration <= MAX_LOOP_ITERATIONS) {
         agent.Status(`Iteration ${iteration}/${MAX_LOOP_ITERATIONS}`);
@@ -75,21 +76,21 @@ export class DevLoopCommand extends Command {
         let coderTask = await readFile(absoluteFeatureFile, 'utf8');
 
         if (iteration > 1) {
-          // Add Review.md (mandatory) and Improvements.md (optional) if they exist in chroot
+          // Add Review.md (mandatory) and Improvements.md (optional) if they exist in sandbox 
 
           // Check Review.md
           try {
-            const reviewPath = path.join(chroot, 'Review.md');
+            const reviewPath = path.join(sandbox, 'Review.md');
             await access(reviewPath);
             const review = await readFile(reviewPath, 'utf8');
             coderTask += `\n\nReview:\n${review}`;
           } catch (e) {
-            return "Error: Review.md not found in chroot.";
+            return "Error: Review.md not found in sandbox.";
           }
 
           // Check Improvements.md
           try {
-            const improvementsPath = path.join(chroot, 'Improvements.md');
+            const improvementsPath = path.join(sandbox, 'Improvements.md');
             await access(improvementsPath);
             const improvements = await readFile(improvementsPath, 'utf8');
             coderTask += `\n\nImprovements:\n${improvements}`;
@@ -98,7 +99,7 @@ export class DevLoopCommand extends Command {
           }
         }
         await runTask(coderPersonality, coderTask);
-        runGitCommand(['add', '*'], chroot);
+        runGitCommand(['add', '*'], target);
         // 2. Reviewer
         agent.Status("--- Reviewer ---");
         agent.restart();
