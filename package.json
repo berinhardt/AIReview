@@ -9,6 +9,7 @@
       "vitest": "^3.0.0"
    },
    "scripts": {
-      "test": "vitest run"
+      "test": "vitest run",
+      "test:docker": "docker build -t aireviewer-test-container . && docker run --rm aireviewer-test-container"
    }
 }
