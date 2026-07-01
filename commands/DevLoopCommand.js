@@ -98,7 +98,7 @@ export class DevLoopCommand extends Command {
           }
         }
         await runTask(coderPersonality, coderTask);
-        runGitCommand(['add', '*'], path.join(chroot, 'project'))
+        runGitCommand(['add', '*'], chroot);
         // 2. Reviewer
         agent.Status("--- Reviewer ---");
         agent.restart();

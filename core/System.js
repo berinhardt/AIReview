@@ -49,13 +49,11 @@ export async function SanitizePath(filename, ENV) {
   }
 
   // Resolve path
-  const resolvedPath = path.join(baseDir, relativePath);
+  const resolvedPath = path.normalize(path.join(baseDir, relativePath));
 
-  // Check for symlinks and traversal in the path
+  // Check for symlinks in the path
   let checkPath = resolvedPath;
-  while (true) {
-    if (path.basename(checkPath) === ".." || path.basename(checkPath) === ".")
-      throw new Error("Permission Denied");
+  while (checkPath.startsWith(baseDir)) {
     try {
       const stats = await lstat(checkPath);
       if (stats.isSymbolicLink()) throw new Error("Permission Denied");
