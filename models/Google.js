@@ -59,6 +59,7 @@ class GeminiLLM {
         stream.emit("request", request);
 
         const interaction = await client.interactions.create(request);
+        this.lastRequest = Date.now();
         let DeltaHandler = null;
         for await (const data of interaction) {
           if (stream.closed) break;
@@ -100,8 +101,9 @@ class GeminiLLM {
     })
 
     const now = Date.now();
-    const timeout = Math.max(0, 60000 / this.RPM_LIMIT - (now - this.lastRequest));
-    stream.emit("status", "Waiting...", timeout, this.RPM_LIMIT);
+    const elapsed = (now - this.lastRequest);
+    const timeout = Math.max(0, 60000 / this.RPM_LIMIT - elapsed);
+    stream.emit("status", `Waiting... ${timeout}ms`);
     setTimeout(sendRequest, timeout);
 
     return stream;
@@ -174,3 +176,10 @@ export const Gemini31Pro = new GeminiLLM({
   input: 2,
   output: 12,
 });
+export function GeminiNoWarn() {
+  const OrigWarn = console.warn;
+  console.warn = function (...args) {
+    if (args[0].indexOf("GoogleGenAI.interactions") == 0) return;
+    OrigWarn.apply(console, args);
+  }
+}

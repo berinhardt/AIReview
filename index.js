@@ -18,6 +18,7 @@ import { TaskCommand } from "./commands/TaskCommand.js";
 import { DevLoopCommand } from "./commands/DevLoopCommand.js";
 import { CommandRegistry } from "./core/CommandRegistry.js";
 import { OutputHandler } from "./core/OutputHandler.js";
+import { GeminiNoWarn } from "./models/Google.js";
 
 program.version("0.2.0")
   .option('-p, --personality <personality>', 'AI personality file', null)
@@ -29,7 +30,7 @@ program.version("0.2.0")
   .option('-r, --rpm-limit <rpm>', 'Max requests per minute', 0)
   .action(main)
   .parse(process.argv);
-
+GeminiNoWarn();
 async function executeTask(agent, task, output) {
   if (!task) return;
 
@@ -49,7 +50,7 @@ async function main(opts) {
   try {
     LOGFILE = createWriteStream(opts.logfile);
     const model = await LoadLLMModel(opts.model);
-    if (opts.rpm) model.RPM_LIMIT = opts.rpm;
+    if (opts.rpmLimit) model.RPM_LIMIT = opts.rpmLimit;
     const agent = new Agent(model, opts.chroot);
     if (opts.personality) {
       await agent.setPersonality(opts.personality);

@@ -9,45 +9,42 @@ import { Agent } from './core/Agent.js'
 import { ReadFile, ListFiles } from "./tools/FileTools.js";
 import { GitStatus, GitDiffFile } from "./tools/GitTools.js";
 import { OutputHandler } from "./core/OutputHandler.js";
+import { GeminiNoWarn } from "./models/Google.js";
 
 program.version("0.2.0")
-   .argument('<repo>', 'Git Repo Path')
-   .option('-m, --model <model>', 'AI model to use', "Google.Gemini31FlashLite")
-   .option('-r, --revision <revision>', 'base git rev of the diff', "HEAD")
-   .option('-o, --output <output>', 'output file', '-')
-   .option('-l, --logfile <logfile>', 'logfile', 'last.log')
-   .action(main)
-   .parse(process.argv);
-const OrigWarn = console.warn;
-console.warn = function (...args) {
-   if (args[0].indexOf("GoogleGenAI.interactions") == 0) return;
-   OrigWarn.apply(console, args);
-}
+  .argument('<repo>', 'Git Repo Path')
+  .option('-m, --model <model>', 'AI model to use', "Google.Gemini31FlashLite")
+  .option('-r, --revision <revision>', 'base git rev of the diff', "HEAD")
+  .option('-o, --output <output>', 'output file', '-')
+  .option('-l, --logfile <logfile>', 'logfile', 'last.log')
+  .action(main)
+  .parse(process.argv);
+GeminiNoWarn();
 async function main(repo, opts) {
-   let LOGFILE = null;
-   try {
-      LOGFILE = fs.createWriteStream(opts.logfile);
-      // Validate repo path
-      const absoluteRepoPath = path.resolve(repo);
-      if (!fs.existsSync(absoluteRepoPath)) {
-         throw new Error(`Repository path does not exist: ${absoluteRepoPath}`);
-      }
-      try {
-         checkGitRepo(absoluteRepoPath);
-      } catch (e) {
-         throw new Error(`Invalid repository: ${e.message}`);
-      }
+  let LOGFILE = null;
+  try {
+    LOGFILE = fs.createWriteStream(opts.logfile);
+    // Validate repo path
+    const absoluteRepoPath = path.resolve(repo);
+    if (!fs.existsSync(absoluteRepoPath)) {
+      throw new Error(`Repository path does not exist: ${absoluteRepoPath}`);
+    }
+    try {
+      checkGitRepo(absoluteRepoPath);
+    } catch (e) {
+      throw new Error(`Invalid repository: ${e.message}`);
+    }
 
-      const model = await LoadLLMModel(opts.model);
+    const model = await LoadLLMModel(opts.model);
 
-      const agent = new Agent(model, absoluteRepoPath);
-      const reviewerPersonalityPath = path.join(Dirname(import.meta.url), "prompts", "Reviewer.md");
-      await agent.setPersonality(reviewerPersonalityPath);
-      pipeline(agent.logger, LOGFILE, { end: false });
+    const agent = new Agent(model, absoluteRepoPath);
+    const reviewerPersonalityPath = path.join(Dirname(import.meta.url), "prompts", "Reviewer.md");
+    await agent.setPersonality(reviewerPersonalityPath);
+    pipeline(agent.logger, LOGFILE, { end: false });
 
-      agent.addTools([ReadFile, ListFiles, GitStatus, GitDiffFile]);
+    agent.addTools([ReadFile, ListFiles, GitStatus, GitDiffFile]);
 
-      const prompt = `
+    const prompt = `
       Your task is to review the changes in the repository against ${opts.revision}.
       
       ## Extra Requirements
@@ -59,21 +56,21 @@ async function main(repo, opts) {
       - **IF** A tool produces unexpected or erroneous output, abort explaining how did you call it, what did you expect, what did it do, and why do you think it's unexpected or erroneous
     `;
 
-      const stream = agent.Task(prompt);
+    const stream = agent.Task(prompt);
 
-      const appendCost = new Transform({
-         transform(chunk, encoding, cb) { cb(null, chunk); },
-         flush(cb) { this.push(`\n\nUSD ${agent.cost}\n`); cb(); }
-      });
-      const output = new OutputHandler(opts.output == "-" ? process.stdout : fs.createWriteStream(opts.output, { encoding: "utf8" }));
-      agent.signal.on("status", (s) => output.setStatus(s));
-      try {
-         await pipeline(stream, appendCost, output, { end: false });
-      } finally {
-         output.end();
-      }
-   } catch (error) {
-      console.error(`\nError: ${error.message}`);
-      process.exit(1);
-   } finally { }
+    const appendCost = new Transform({
+      transform(chunk, encoding, cb) { cb(null, chunk); },
+      flush(cb) { this.push(`\n\nUSD ${agent.cost}\n`); cb(); }
+    });
+    const output = new OutputHandler(opts.output == "-" ? process.stdout : fs.createWriteStream(opts.output, { encoding: "utf8" }));
+    agent.signal.on("status", (s) => output.setStatus(s));
+    try {
+      await pipeline(stream, appendCost, output, { end: false });
+    } finally {
+      output.end();
+    }
+  } catch (error) {
+    console.error(`\nError: ${error.message}`);
+    process.exit(1);
+  } finally { }
 }

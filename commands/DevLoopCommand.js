@@ -1,7 +1,7 @@
 import { Command } from './Command.js';
 import { readFile, access } from 'fs/promises';
 import path from 'path';
-import { Dirname, SanitizePath } from '../core/System.js';
+import { Dirname, runGitCommand, SanitizePath } from '../core/System.js';
 import readline from 'readline/promises';
 import { pipeline } from 'stream/promises';
 
@@ -99,6 +99,7 @@ export class DevLoopCommand extends Command {
         }
         await runTask(coderPersonality, coderTask);
 
+        runGitCommand(['add', '*'], path.join(chroot, 'project'))
         // 2. Reviewer
         agent.Status("--- Reviewer ---");
         agent.restart();
