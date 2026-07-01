@@ -120,7 +120,7 @@ export function validateNonNegativeInteger(value, defaultValue) {
 }
 export function isIgnored(filePath) {
   try {
-    execFileSync('git', ['check-ignore', '-q', filePath], { cwd: path.basename(filePath) });
+    execFileSync('git', ['check-ignore', '-q', path.basename(filePath)], { cwd: path.dirname(filePath) });
     return true;
   } catch (error) {
     return false;
