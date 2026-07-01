@@ -13,7 +13,7 @@ const MAX_FILES_RETURNED = 1024;
  * @param {Object} ENV - The environment context.
  * @returns {Promise<{result: string[] | string, warning?: string, error?: string}>} A promise that resolves to an object containing the list of files, a warning if truncated, or an error message.
  */
-export async function ListFiles({ path: targetPath, recursive = false }, ENV) {
+export async function ListFiles(params, ENV) {
   try {
     const files = [];
     let warning = null;
@@ -23,16 +23,19 @@ export async function ListFiles({ path: targetPath, recursive = false }, ENV) {
       };
 
       try {
-        const safePath = SanitizePath(currentPath, ENV);
-        if (path.basename(currentPath) !== '/' && !isIgnored(safePath)) {
+        const safePath = await SanitizePath(currentPath, ENV);
+        const basename = path.basename(safePath);
+        const ignored = path.dirname(safePath) == '/' && !isIgnored(safePath);
+        if (!ignored) {
           const stats = await fs.lstat(safePath);
           files.push(currentPath);
-          if (stats.isDirectory()) {
-            const entries = fs.readdir(currentPath, { withFileTypes: true });
-            for await (const entry of entries) {
+          if (stats.isDirectory() && basename != ".git") {
+            const entries = await fs.readdir(safePath, { withFileTypes: true });
+            for (const entry of entries) {
               if (files.length >= MAX_FILES_RETURNED) break;
               const relativePath = path.join(currentPath, entry.name);
-              if (recursive) {
+
+              if (params.recursive) {
                 await traverse(relativePath);
               } else {
                 files.push(relativePath);
@@ -41,18 +44,16 @@ export async function ListFiles({ path: targetPath, recursive = false }, ENV) {
           }
           if (safePath == ENV.notesDir && ENV.targetDir) {
             files.push(path.join("drive"))
-            if (recursive) await traverse(path.join("drive"));
+            if (params.recursive) await traverse(path.join("drive"));
           }
         }
       } catch (error) {
-        // Skip inaccessible directories
+        console.error(error);
         return;
       }
-
-      if (currentPath === ENV.notesDir) await traverse("/drive",)
     }
 
-    await traverse(path);
+    await traverse(params.path);
 
     const result = {
       result: files,

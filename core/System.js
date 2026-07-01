@@ -27,9 +27,9 @@ export async function SanitizePath(filename, ENV) {
   let relativePath;
   if (filename[0] !== "/") filename = "/" + filename;
 
-  if (filename.startsWith('/drive/')) {
+  if (filename.startsWith('/drive')) {
     baseDir = targetDir;
-    relativePath = filename.substring('/drive/'.length);
+    relativePath = filename.substring('/drive'.length);
   } else if (filename.startsWith('/')) {
     baseDir = notesDir;
     relativePath = filename.substring(1);
