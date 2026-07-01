@@ -14,7 +14,7 @@ import { runGitCommand, checkGitRepo, SanitizePath } from '../../core/System.js'
  * @throws {Error} Throws an error if the file is not found or if the git command fails.
  */
 export async function GitDiffFile({ filename, revision }, ENV) {
-   const absolutePath = await SanitizePath(filename, ENV.cwd);
+   const absolutePath = await SanitizePath(filename, ENV);
    const dir = path.dirname(absolutePath);
    const realname = path.basename(absolutePath);
 

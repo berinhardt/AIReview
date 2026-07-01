@@ -1,6 +1,6 @@
 import path from "path";
 import { fileURLToPath } from "url";
-import fsPromises, { access, constants, mkdir, readdir, realpath, stat } from "fs/promises";
+import fsPromises, { access, constants, mkdir, readdir, realpath, stat, lstat } from "fs/promises";
 import fs from 'fs';
 import { execFileSync } from 'child_process';
 
@@ -20,46 +20,54 @@ export async function releaseLock(lockPath) {
 export function Dirname(meta_url) {
   return path.dirname(fileURLToPath(meta_url));
 }
-export async function SanitizePath(filename, chroot) {
-  await mkdir(chroot, { recursive: true });
-  const cwd = await realpath(chroot);
-  let targetPath = path.resolve(cwd, filename);
+export async function SanitizePath(filename, ENV) {
+  const { notesDir, targetDir } = ENV;
 
-  // Check for hidden components in the target path
-  const relativeTarget = path.relative(cwd, targetPath);
-  const targetComponents = relativeTarget.split(path.sep);
-  for (const component of targetComponents) {
-    if (component.startsWith('.') && component !== '.' && component !== '..') {
+  let baseDir;
+  let relativePath;
+  if (filename[0] !== "/") filename = "/" + filename;
+
+  if (filename.startsWith('/drive/')) {
+    baseDir = targetDir;
+    relativePath = filename.substring('/drive/'.length);
+  } else if (filename.startsWith('/')) {
+    baseDir = notesDir;
+    relativePath = filename.substring(1);
+  }
+
+  if (baseDir === targetDir && !targetDir)
+    throw new Error("Permission Denied");
+
+  if (baseDir === targetDir) {
+    try {
+      const stats = await stat(targetDir);
+      if (!stats.isDirectory())
+        throw new Error("Permission Denied");
+    } catch (e) {
       throw new Error("Permission Denied");
     }
   }
 
-  let checkPath = targetPath;
+  // Resolve path
+  const resolvedPath = path.join(baseDir, relativePath);
+
+  // Check for symlinks and traversal in the path
+  let checkPath = resolvedPath;
   while (true) {
+    if (path.basename(checkPath) === ".." || path.basename(checkPath) === ".")
+      throw new Error("Permission Denied");
     try {
-      const realPath = await realpath(checkPath);
-      const relative = path.relative(cwd, realPath);
-      if (relative.startsWith('..') || path.isAbsolute(relative)) throw new Error("Permission Denied");
-
-      // Check for hidden components in the real path (to catch symlink tricks)
-      const realComponents = relative.split(path.sep);
-      for (const component of realComponents) {
-        if (component.startsWith('.') && component !== '.' && component !== '..') {
-          throw new Error("Permission Denied");
-        }
-      }
-
-      return targetPath;
-    } catch (error) {
-      if (error.code === 'ENOENT') {
-        const parent = path.dirname(checkPath);
-        if (parent === checkPath) throw new Error("Permission Denied");
-        checkPath = parent;
-      } else {
+      const stats = await lstat(checkPath);
+      if (stats.isSymbolicLink()) throw new Error("Permission Denied");
+    } catch (e) {
+      if (error.code !== "ENOENT")
         throw new Error("Permission Denied");
-      }
     }
+    if (checkPath === baseDir) break;
+    checkPath = path.dirname(checkPath);
   }
+
+  return resolvedPath;
 }
 
 export async function ValidateFile(filePath) {

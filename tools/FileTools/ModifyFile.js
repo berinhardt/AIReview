@@ -13,7 +13,7 @@ import { SanitizePath, acquireLock, releaseLock } from "../../core/System.js";
  * @returns {Promise<{result: string, error?: string}>} A promise that resolves to an object indicating success or failure.
  */
 export async function ModifyFile({ filename, search, replace }, ENV) {
-  const targetPath = await SanitizePath(filename, ENV.cwd);
+  const targetPath = await SanitizePath(filename, ENV);
   const lockPath = targetPath + ".lock";
 
   // Improved retry mechanism with exponential backoff

@@ -14,7 +14,7 @@ import { SanitizePath } from "../../core/System.js";
  */
 export async function CreateFile({ filename, content }, ENV) {
    try {
-      const targetPath = await SanitizePath(filename, ENV.cwd);
+      const targetPath = await SanitizePath(filename, ENV);
       await fs.mkdir(path.dirname(targetPath), { recursive: true });
       await fs.writeFile(targetPath, content, { encoding: 'utf8', flag: "wx" });
       return { result: "Success" };
