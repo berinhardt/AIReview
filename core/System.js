@@ -113,9 +113,9 @@ export function validateNonNegativeInteger(value, defaultValue) {
   }
   return parsed;
 }
-export function isIgnored(filePath, ENV) {
+export function isIgnored(filePath) {
   try {
-    execFileSync('git', ['check-ignore', '-q', filePath], { cwd });
+    execFileSync('git', ['check-ignore', '-q', filePath], { cwd: path.basename(filePath) });
     return true;
   } catch (error) {
     return false;

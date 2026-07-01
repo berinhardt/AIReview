@@ -11,56 +11,54 @@ const MAX_FILES_RETURNED = 1024;
  * @param {string} params.path - The relative path of the directory to list.
  * @param {boolean} [params.recursive=false] - Whether to list files recursively.
  * @param {Object} ENV - The environment context.
- * @param {string} ENV.cwd - The current working directory.
  * @returns {Promise<{result: string[] | string, warning?: string, error?: string}>} A promise that resolves to an object containing the list of files, a warning if truncated, or an error message.
  */
 export async function ListFiles({ path: targetPath, recursive = false }, ENV) {
   try {
-    const sanitizedPath = await SanitizePath(targetPath, ENV);
-
     const files = [];
+    let warning = null;
+    async function traverse(currentPath) {
+      if (files.length >= MAX_FILES_RETURNED) {
+        warning = "Too many files"
+      };
 
-    async function traverse(currentPath, relativePath) {
-      if (files.length >= MAX_FILES_RETURNED) return;
-
-      let entries;
       try {
-        entries = await fs.readdir(currentPath, { withFileTypes: true });
+        const safePath = SanitizePath(currentPath, ENV);
+        if (path.basename(currentPath) !== '/' && !isIgnored(safePath)) {
+          const stats = await fs.lstat(safePath);
+          files.push(currentPath);
+          if (stats.isDirectory()) {
+            const entries = fs.readdir(currentPath, { withFileTypes: true });
+            for await (const entry of entries) {
+              if (files.length >= MAX_FILES_RETURNED) break;
+              const relativePath = path.join(currentPath, entry.name);
+              if (recursive) {
+                await traverse(relativePath);
+              } else {
+                files.push(relativePath);
+              }
+            }
+          }
+          if (safePath == ENV.notesDir && ENV.targetDir) {
+            files.push(path.join("drive"))
+            if (recursive) await traverse(path.join("drive"));
+          }
+        }
       } catch (error) {
         // Skip inaccessible directories
         return;
       }
 
-      for (const entry of entries) {
-        if (files.length >= MAX_FILES_RETURNED) break;
-        const hidden = entry.name.startsWith('.');
-
-        const fullPath = path.join(currentPath, entry.name);
-        const relPath = path.join(relativePath, entry.name);
-
-        if (!isIgnored(fullPath, ENV)) {
-          if (entry.isDirectory() && !hidden) {
-            if (recursive) {
-              await traverse(fullPath, relPath);
-            }
-          } else if (!entry.isSymbolicLink()) {
-            files.push(relPath);
-          }
-        }
-      }
+      if (currentPath === ENV.notesDir) await traverse("/drive",)
     }
 
-    await traverse(sanitizedPath, "");
+    await traverse(path);
 
-    let result = files;
-    let warning = null;
-
-    if (files.length > MAX_FILES_RETURNED) {
-      result = files.slice(0, MAX_FILES_RETURNED);
-      warning = `List truncated. Showing first ${MAX_FILES_RETURNED} items.`;
-    }
-
-    return { result, warning };
+    const result = {
+      result: files,
+    };
+    if (warning) result.warning;
+    return result;
   } catch (error) {
     return { result: "Failure", error: error.message };
   }
