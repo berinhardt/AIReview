@@ -107,7 +107,6 @@ export function validateNonNegativeInteger(value, defaultValue) {
 }
 export function isIgnored(filePath, cwd) {
   try {
-    console.log("II", filePath, cwd);
     execFileSync('git', ['check-ignore', '-q', filePath], { cwd });
     return true;
   } catch (error) {
