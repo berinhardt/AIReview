@@ -64,6 +64,7 @@ export class DevLoopCommand extends Command {
 
     outputStream.showStatusBar(true);
     try {
+      const chroot = agent.tools.ENV.cwd;
       agent.notes.reviewAccepted = false;
       while (iteration <= MAX_LOOP_ITERATIONS) {
         agent.Status(`Iteration ${iteration}/${MAX_LOOP_ITERATIONS}`);
@@ -75,7 +76,6 @@ export class DevLoopCommand extends Command {
 
         if (iteration > 1) {
           // Add Review.md (mandatory) and Improvements.md (optional) if they exist in chroot
-          const chroot = agent.tools.ENV.cwd;
 
           // Check Review.md
           try {
@@ -98,7 +98,6 @@ export class DevLoopCommand extends Command {
           }
         }
         await runTask(coderPersonality, coderTask);
-
         runGitCommand(['add', '*'], path.join(chroot, 'project'))
         // 2. Reviewer
         agent.Status("--- Reviewer ---");

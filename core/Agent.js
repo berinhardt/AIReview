@@ -116,7 +116,7 @@ export class Agent {
               result: [{ type: 'text', text: null }]
             };
             try {
-              const tag = data.name || data.filename || data.path || data.dir || "";
+              const tag = data.param.name || data.param.filename || data.param.path || data.param.dir || "";
               stream.push(`[TOOL CALL] ${data.name} ${tag}\n`);
               let t = await myAgent.tools.call(data.name, data.param, myAgent);
               response.result = t;
