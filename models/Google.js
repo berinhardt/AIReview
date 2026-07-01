@@ -92,6 +92,7 @@ class GeminiLLM {
               stream.push(null);
               break;
             case 'error':
+              console.error(data.error);
               throw new Error(data.error.message);
           };
         }

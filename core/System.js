@@ -50,9 +50,6 @@ export async function SanitizePath(filename, ENV) {
 
   // Resolve path
   const resolvedPath = path.normalize(path.join(baseDir, relativePath));
-  if (!resolvedPath.startsWith(baseDir)) {
-    throw new Error("Permission Denied");
-  }
 
   // Check for symlinks in the path
   let checkPath = resolvedPath;
@@ -66,94 +63,96 @@ export async function SanitizePath(filename, ENV) {
     }
     if (checkPath === baseDir) break;
     checkPath = path.dirname(checkPath);
-  }
-
-  return resolvedPath;
-}
-
-export async function ValidateFile(filePath) {
-  try {
-    await access(filePath, constants.R_OK);
-    const stats = await stat(filePath);
-    if (!stats.isFile()) {
-      return { valid: false, error: "Path is not a file" };
+    if (!checkPath.startsWith(baseDir)) {
+      throw new Error("Permission Denied");
     }
-    return { valid: true };
-  } catch (error) {
-    return { valid: false, error: error.message };
-  }
-}
 
-export async function LoadLLMModel(model) {
-  const __dirname = path.join(Dirname(import.meta.url), "..");
+    return resolvedPath;
+  }
 
-  const AVAILABLE_MODELS = await readdir(path.join(__dirname, "models"));
-  const [moduleName, moduleMethod] = model.split(/\./, 2);
-  if (AVAILABLE_MODELS.indexOf(`${moduleName}.js`) == -1) {
-    throw new Error(`Unknown Model Family ${model}`);
-  }
-  const modulePath = path.join(__dirname, "models", `${moduleName}.js`);
-  await access(modulePath, constants.F_OK);
-  const module = await import(`file://${modulePath}`);
-  const rval = module[moduleMethod];
-  if (!rval
-    || typeof rval !== 'object'
-    || typeof rval.request !== 'function'
-    || typeof rval.abort !== 'function'
-    || typeof rval.getName !== 'function') {
-    throw new Error(`Model ${model} must be a class-based model instance with request(), abort(), and getName() methods.`);
-  }
-  return rval;
-}
-
-export function validateNonNegativeInteger(value, defaultValue) {
-  const parsed = parseInt(value, 10);
-  if (isNaN(parsed) || parsed < 0) {
-    console.error(`Invalid non-negative integer provided: "${value}". Defaulting to ${defaultValue}.`);
-    return defaultValue;
-  }
-  return parsed;
-}
-export function isIgnored(filePath) {
-  try {
-    execFileSync('git', ['check-ignore', '-q', filePath], { cwd: path.basename(filePath) });
-    return true;
-  } catch (error) {
-    return false;
-  }
-}
-
-export function runGitCommand(args, cwd = process.cwd()) {
-  try {
-    return execFileSync('git', args, { cwd, encoding: 'utf8' });
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      throw new Error('Git command not found');
-    }
-    if (error.code === 'EACCES') {
-      throw new Error('Permission denied');
-    }
-    if (error.stderr) {
-      const stderr = error.stderr.toString();
-      if (stderr.includes('not a git repository')) {
-        throw new Error('Not a git repository');
+  export async function ValidateFile(filePath) {
+    try {
+      await access(filePath, constants.R_OK);
+      const stats = await stat(filePath);
+      if (!stats.isFile()) {
+        return { valid: false, error: "Path is not a file" };
       }
-      throw new Error(`Git command failed: ${stderr.trim()}`);
+      return { valid: true };
+    } catch (error) {
+      return { valid: false, error: error.message };
     }
-    throw error;
   }
-}
 
-export function checkGitRepo(dir) {
-  if (!fs.existsSync(dir)) {
-    throw new Error('File not found');
+  export async function LoadLLMModel(model) {
+    const __dirname = path.join(Dirname(import.meta.url), "..");
+
+    const AVAILABLE_MODELS = await readdir(path.join(__dirname, "models"));
+    const [moduleName, moduleMethod] = model.split(/\./, 2);
+    if (AVAILABLE_MODELS.indexOf(`${moduleName}.js`) == -1) {
+      throw new Error(`Unknown Model Family ${model}`);
+    }
+    const modulePath = path.join(__dirname, "models", `${moduleName}.js`);
+    await access(modulePath, constants.F_OK);
+    const module = await import(`file://${modulePath}`);
+    const rval = module[moduleMethod];
+    if (!rval
+      || typeof rval !== 'object'
+      || typeof rval.request !== 'function'
+      || typeof rval.abort !== 'function'
+      || typeof rval.getName !== 'function') {
+      throw new Error(`Model ${model} must be a class-based model instance with request(), abort(), and getName() methods.`);
+    }
+    return rval;
   }
-  try {
-    runGitCommand(['rev-parse', '--is-inside-work-tree'], dir);
-  } catch (error) {
-    if (error.message === 'Not a git repository') {
+
+  export function validateNonNegativeInteger(value, defaultValue) {
+    const parsed = parseInt(value, 10);
+    if (isNaN(parsed) || parsed < 0) {
+      console.error(`Invalid non-negative integer provided: "${value}". Defaulting to ${defaultValue}.`);
+      return defaultValue;
+    }
+    return parsed;
+  }
+  export function isIgnored(filePath) {
+    try {
+      execFileSync('git', ['check-ignore', '-q', filePath], { cwd: path.basename(filePath) });
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  export function runGitCommand(args, cwd = process.cwd()) {
+    try {
+      return execFileSync('git', args, { cwd, encoding: 'utf8' });
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        throw new Error('Git command not found');
+      }
+      if (error.code === 'EACCES') {
+        throw new Error('Permission denied');
+      }
+      if (error.stderr) {
+        const stderr = error.stderr.toString();
+        if (stderr.includes('not a git repository')) {
+          throw new Error('Not a git repository');
+        }
+        throw new Error(`Git command failed: ${stderr.trim()}`);
+      }
       throw error;
     }
-    throw new Error('Not a git repository');
   }
-}
+
+  export function checkGitRepo(dir) {
+    if (!fs.existsSync(dir)) {
+      throw new Error('File not found');
+    }
+    try {
+      runGitCommand(['rev-parse', '--is-inside-work-tree'], dir);
+    } catch (error) {
+      if (error.message === 'Not a git repository') {
+        throw error;
+      }
+      throw new Error('Not a git repository');
+    }
+  }
