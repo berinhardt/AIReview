@@ -5,6 +5,7 @@ import { program } from 'commander';
 import { LoadLLMModel, ValidateFile, Dirname } from './core/System.js';
 import { Agent } from './core/Agent.js'
 import { text } from "stream/consumers";
+import { readFile } from "fs/promises";
 import { createWriteStream } from "fs";
 import { pipeline } from "stream/promises";
 import { Transform } from "stream";
@@ -23,8 +24,8 @@ import { GeminiNoWarn } from "./models/Google.js";
 program.version("0.2.0")
   .option('-p, --personality <personality>', 'AI personality file', null)
   .option('-m, --model <model>', 'AI model name', "Google.Gemini31FlashLite")
-  .option('-n, --notes-dir <dir>', 'Notes directory', "notes")
-  .option('-d, --target-dir <dir>', 'Target directory', null)
+  .option('-n, --notes-dir <dir>', 'Notes directory', "sandbox")
+  .option('-d, --target-dir <dir>', 'Target directory', "target")
   .option('-t, --task <task>', 'Task file', (val, memo) => [...memo, val], ["-"])
   .option('-o, --output <output>', 'Output file', '-')
   .option('-l, --logfile <logfile>', 'Agent log file', 'last.log')
@@ -93,7 +94,7 @@ async function main(opts) {
     for (const task of tasks) {
       try {
         if (task !== "-") {
-          const { valid, error } = await ValidateFile(task);
+          const { valid } = await ValidateFile(task);
           if (valid) {
             const taskContent = await readFile(task, "utf8");
             await executeTask(agent, taskContent, output);
