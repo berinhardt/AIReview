@@ -35,7 +35,7 @@ class GeminiLLM {
         const client = new GoogleGenAI({ apiKey: APIKEY });
         const {
           temperature = 0.0,
-          thinking_level = "high",
+          thinking_level = "low",
           tools = null,
           response_format = null,
           previous_interaction_id = null,
