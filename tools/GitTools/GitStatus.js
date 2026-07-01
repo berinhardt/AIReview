@@ -12,7 +12,7 @@ import { runGitCommand, checkGitRepo, SanitizePath } from '../../core/System.js'
  * @throws {Error} Throws an error if the git command fails.
  */
 export async function GitStatus({ dir, revision }, ENV) {
-   dir = await SanitizePath(dir, ENV.cwd);
+   dir = await SanitizePath(dir, ENV);
    checkGitRepo(dir);
 
    let output;

@@ -12,7 +12,7 @@ import { SanitizePath } from "../../core/System.js";
  */
 export async function DeleteFile({ path: targetPath }, ENV) {
    try {
-      const sanitizedPath = await SanitizePath(targetPath, ENV.cwd);
+      const sanitizedPath = await SanitizePath(targetPath, ENV);
       const stats = await fs.stat(sanitizedPath);
       
       if (stats.isFile()) {

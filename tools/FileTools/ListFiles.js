@@ -16,7 +16,7 @@ const MAX_FILES_RETURNED = 1024;
  */
 export async function ListFiles({ path: targetPath, recursive = false }, ENV) {
    try {
-      const sanitizedPath = await SanitizePath(targetPath, ENV.cwd);
+      const sanitizedPath = await SanitizePath(targetPath, ENV);
 
       const files = [];
 

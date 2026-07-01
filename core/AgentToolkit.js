@@ -20,11 +20,12 @@ import path from "path";
  * @param {string} chroot - root of the sandbox for the tools
  */
 export class AgentToolkit {
-   constructor(chroot) {
+   constructor(notesDir, targetDir) {
       this.tools = [];
       this.map = {};
       this.ENV = {
-         cwd: path.resolve(chroot)
+         notesDir: path.resolve(notesDir),
+         targetDir: targetDir ? path.resolve(targetDir) : null
       };
    }
 

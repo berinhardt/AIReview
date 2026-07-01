@@ -21,9 +21,9 @@ import { OutputHandler } from "./core/OutputHandler.js";
 
 program.version("0.2.0")
   .option('-p, --personality <personality>', 'AI personality file', null)
+  .option('-n, --notes-dir <dir>', 'Notes directory', "notes")
+  .option('-T, --target-dir <dir>', 'Target directory', null)
   .option('-t, --task <task>', 'Task file', (val, memo) => [...memo, val], ["-"])
-  .option('-m, --model <model>', 'AI model to use', "Google.Gemini31FlashLite")
-  .option('-d, --chroot <dir>', 'Exposed root of paths to AI', "sandbox")
   .option('-o, --output <output>', 'Output file', '-')
   .option('-l, --logfile <logfile>', 'Agent log file', 'last.log')
   .option('-r, --rpm-limit <rpm>', 'Max requests per minute', 0)
@@ -50,7 +50,7 @@ async function main(opts) {
     LOGFILE = createWriteStream(opts.logfile);
     const model = await LoadLLMModel(opts.model);
     if (opts.rpm) model.RPM_LIMIT = opts.rpm;
-    const agent = new Agent(model, opts.chroot);
+    const agent = new Agent(model, opts.notesDir, opts.targetDir);
     if (opts.personality) {
       await agent.setPersonality(opts.personality);
     } else {

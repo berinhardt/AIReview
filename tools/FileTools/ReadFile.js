@@ -12,7 +12,7 @@ import { SanitizePath } from "../../core/System.js";
  */
 export async function ReadFile({ filename }, ENV) {
    try {
-      const targetPath = await SanitizePath(filename, ENV.cwd);
+      const targetPath = await SanitizePath(filename, ENV);
       const data = await fs.readFile(targetPath, "utf-8");
       return { content: data };
    } catch (error) {
