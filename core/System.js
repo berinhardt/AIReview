@@ -113,7 +113,7 @@ export function validateNonNegativeInteger(value, defaultValue) {
   }
   return parsed;
 }
-export function isIgnored(filePath, cwd) {
+export function isIgnored(filePath, ENV) {
   try {
     execFileSync('git', ['check-ignore', '-q', filePath], { cwd });
     return true;
