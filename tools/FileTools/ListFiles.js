@@ -57,7 +57,6 @@ export async function ListFiles(params, ENV) {
           }
         }
       } catch (error) {
-        console.error(error);
         return;
       }
     }
