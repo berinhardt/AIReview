@@ -4,11 +4,5 @@
       "@google/genai": "^2.8.0",
       "commander": "^15.0.0",
       "dotenv": "^17.4.2"
-   },
-   "devDependencies": {
-      "jest": "^29.7.0"
-   },
-   "scripts": {
-      "test": "jest"
    }
 }
