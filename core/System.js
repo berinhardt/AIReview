@@ -22,19 +22,14 @@ export function Dirname(meta_url) {
 }
 export async function SanitizePath(filename, ENV) {
   const { notesDir, targetDir } = ENV;
-  let baseDir;
-  let relativePath;
   if (filename[0] != "/") filename = path.join("/", filename);
-  filename = path.normalize(filename);
 
-  const drive = path.normalize(path.join("/", "drive"));
+  let baseDir = path.normalize(targetDir);
+  let relativePath = path.relative(path.join("/", "drive"), filename);
 
-  if (filename.startsWith(drive)) {
-    baseDir = path.normalize(targetDir);
-    relativePath = filename.substring(drive.length);
-  } else {
+  if (path.isAbsolute(relativePath) || relativePath.startsWith("..")) {
     baseDir = path.normalize(notesDir);
-    relativePath = filename.substring(1);
+    relativePath = path.relative("/", filename);
   }
 
   if (baseDir === targetDir && !targetDir)
