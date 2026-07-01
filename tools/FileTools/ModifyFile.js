@@ -9,7 +9,6 @@ import { SanitizePath, acquireLock, releaseLock } from "../../core/System.js";
  * @param {string} params.search - The original code to search for.
  * @param {string} params.replace - The replacement code.
  * @param {Object} ENV - The environment context.
- * @param {string} ENV.cwd - The current working directory.
  * @returns {Promise<{result: string, error?: string}>} A promise that resolves to an object indicating success or failure.
  */
 export async function ModifyFile({ filename, search, replace }, ENV) {
