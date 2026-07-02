@@ -84,7 +84,7 @@ export class DevLoopCommand extends Command {
                const review = await readFile(reviewPath, 'utf8');
                coderTask += `\n\nReview:\n${review}`;
             } catch (e) {
-               if (iteration > 0)
+               if (iteration > 1)
                   return "Error: Review.md not found in sandbox.";
             }
 
