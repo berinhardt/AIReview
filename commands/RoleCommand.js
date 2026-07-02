@@ -6,40 +6,37 @@ import path from "path";
  * @extends Command
  */
 export class RoleCommand extends Command {
-  /**
-   * @property {CommandMeta} META
-   */
-  constructor() {
-    super("ROLE");
-    this.META = {
-      name: "ROLE",
-      description: "Change the agent's personality",
-      arguments: [
-        { name: "filename", type: "string", description: "The path to the personality file." }
-      ]
-    };
-  }
+   /**
+    * @property {CommandMeta} META
+    */
+   constructor() {
+      super("ROLE");
+      this.META = {
+         name: "ROLE",
+         description: "Change the agent's personality",
+         arguments: [
+            { name: "filename", type: "string", description: "The path to the personality file." }
+         ]
+      };
+   }
 
-  /**
-   * Executes the role change command.
-   * @description Sets the agent's personality based on the provided file.
-   * @param {Object} args - The arguments for the command.
-   * @param {string} args.filename - The path to the personality file.
-   * @param {Object} config - The configuration object.
-   * @param {Object} config.agent - The agent instance.
-   * @returns {Promise<string>} A success message indicating the role was loaded.
-   * @throws {Error} If the filename is missing or an error occurs during execution.
-   */
-  async execute(args, config) {
-    const filename = args.filename;
-    if (!filename) {
-      throw new Error("Error: Filename required.");
-    }
+   /**
+    * Executes the role change command.
+    * @description Sets the agent's personality based on the provided file.
+    * @param {Object} args - The arguments for the command.
+    * @param {string} args.filename - The path to the personality file.
+    * @param {Object} config - The configuration object.
+    * @param {Object} config.agent - The agent instance.
+    * @returns {Promise<string>} A success message indicating the role was loaded.
+    * @throws {Error} If the filename is missing or an error occurs during execution.
+    */
+   async execute(args, config) {
+      const filename = args.filename;
+      if (!filename) {
+         throw new Error("Error: Filename required.");
+      }
 
-    // The requirement says "relative to the current working directory (CWD)"
-    const filePath = path.resolve(process.cwd(), filename);
-
-    await config.agent.setPersonality(filePath);
-    return `Role loaded successfully from ${filename}.`;
-  }
+      await config.agent.setPersonality(filePath);
+      return `Role loaded successfully from ${filename}.`;
+   }
 }
