@@ -12,7 +12,7 @@ import { Transform } from "stream";
 import { CreateFile, DeleteFile, ModifyFile, ReadFile, ListFiles } from "./tools/FileTools.js";
 import { GitStatus, GitDiffFile } from "./tools/GitTools.js";
 import { ReviewResult } from "./tools/ReviewTools.js";
-import { RunTestsTool } from "./tools/TestTools.js";
+import { RunTests } from "./tools/TestTools.js";
 import { FileCommand } from "./commands/FileCommand.js";
 import { ResetCommand } from "./commands/ResetCommand.js";
 import { RoleCommand } from "./commands/RoleCommand.js";
