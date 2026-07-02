@@ -1,17 +1,17 @@
-import { jest } from '@jest/globals';
+import { describe, it, expect, vi } from 'vitest';
 import { DeleteFile } from '../../../tools/FileTools/DeleteFile.js';
 import fs from 'fs/promises';
-import * as System from '../../../core/System.js';
+import { SanitizePath } from '../../../core/System.js';
 
-jest.mock('fs/promises');
-jest.mock('../../../core/System.js');
+vi.mock('fs/promises');
+vi.mock('../../../core/System.js');
 
 describe('DeleteFile', () => {
   it('should delete a file successfully', async () => {
     const params = { path: 'test.txt' };
     const ENV = {};
     
-    System.SanitizePath.mockResolvedValue('/abs/path/test.txt');
+    SanitizePath.mockResolvedValue('/abs/path/test.txt');
     fs.stat.mockResolvedValue({ isFile: () => true, isDirectory: () => false });
     fs.unlink.mockResolvedValue();
 
@@ -25,7 +25,7 @@ describe('DeleteFile', () => {
     const params = { path: 'test-dir' };
     const ENV = {};
     
-    System.SanitizePath.mockResolvedValue('/abs/path/test-dir');
+    SanitizePath.mockResolvedValue('/abs/path/test-dir');
     fs.stat.mockResolvedValue({ isFile: () => false, isDirectory: () => true });
     fs.rmdir.mockResolvedValue();
 
@@ -39,7 +39,7 @@ describe('DeleteFile', () => {
     const params = { path: 'test' };
     const ENV = {};
     
-    System.SanitizePath.mockResolvedValue('/abs/path/test');
+    SanitizePath.mockResolvedValue('/abs/path/test');
     fs.stat.mockResolvedValue({ isFile: () => false, isDirectory: () => false });
 
     const result = await DeleteFile(params, ENV);
@@ -51,7 +51,7 @@ describe('DeleteFile', () => {
     const params = { path: 'test' };
     const ENV = {};
     
-    System.SanitizePath.mockRejectedValue(new Error('Invalid path'));
+    SanitizePath.mockRejectedValue(new Error('Invalid path'));
 
     const result = await DeleteFile(params, ENV);
     

@@ -1,10 +1,10 @@
-import { jest } from '@jest/globals';
+import { describe, it, expect, vi } from 'vitest';
 import { ModifyFile } from '../../../tools/FileTools/ModifyFile.js';
 import fs from 'fs/promises';
 import * as System from '../../../core/System.js';
 
-jest.mock('fs/promises');
-jest.mock('../../../core/System.js');
+vi.mock('fs/promises');
+vi.mock('../../../core/System.js');
 
 describe('ModifyFile', () => {
   it('should modify a file successfully', async () => {

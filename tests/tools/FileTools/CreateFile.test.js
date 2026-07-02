@@ -1,24 +1,24 @@
-import { jest } from '@jest/globals';
+import { describe, it, expect, vi } from 'vitest';
 import { CreateFile } from '../../../tools/FileTools/CreateFile.js';
 import fs from 'fs/promises';
-import * as System from '../../../core/System.js';
+import { SanitizePath } from '../../../core/System.js';
 
-jest.mock('fs/promises');
-jest.mock('../../../core/System.js');
+vi.mock('fs/promises');
+vi.mock('../../../core/System.js');
 
 describe('CreateFile', () => {
    it('should create a file successfully', async () => {
       const params = { filename: 'test.txt', content: 'hello' };
       const ENV = {};
 
-      System.SanitizePath.mockResolvedValue('/abs/path/test.txt');
+      SanitizePath.mockResolvedValue('/abs/path/test.txt');
       fs.mkdir.mockResolvedValue();
       fs.writeFile.mockResolvedValue();
 
       const result = await CreateFile(params, ENV);
 
       expect(result).toEqual({ result: 'Success' });
-      expect(System.SanitizePath).toHaveBeenCalledWith('test.txt', ENV);
+      expect(SanitizePath).toHaveBeenCalledWith('test.txt', ENV);
       expect(fs.mkdir).toHaveBeenCalled();
       expect(fs.writeFile).toHaveBeenCalledWith('/abs/path/test.txt', 'hello', { encoding: 'utf8', flag: 'wx' });
    });
@@ -27,7 +27,7 @@ describe('CreateFile', () => {
       const params = { filename: 'test.txt', content: 'hello' };
       const ENV = {};
 
-      System.SanitizePath.mockRejectedValue(new Error('Invalid path'));
+      SanitizePath.mockRejectedValue(new Error('Invalid path'));
 
       const result = await CreateFile(params, ENV);
 
@@ -38,7 +38,7 @@ describe('CreateFile', () => {
       const params = { filename: 'test.txt', content: 'hello' };
       const ENV = {};
 
-      System.SanitizePath.mockResolvedValue('/abs/path/test.txt');
+      SanitizePath.mockResolvedValue('/abs/path/test.txt');
       fs.mkdir.mockResolvedValue();
       fs.writeFile.mockRejectedValue(new Error('Permission denied'));
 
