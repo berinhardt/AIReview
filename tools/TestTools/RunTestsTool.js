@@ -49,9 +49,9 @@ export async function RunTestsTool({ testfile }, ENV) {
       // 3. Execution
       try {
          // Use execFile for security
-         const { stdout } = await execFileAsync('npm', commandArgs, { timeout: TIMEOUT, cwd: ENV.targetDir });
+         const cmd = await execFileAsync('npm', commandArgs, { timeout: TIMEOUT, cwd: ENV.targetDir });
          return {
-            result: stdout,
+            result: cmd,
             error: null,
             success: true
          };
