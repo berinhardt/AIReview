@@ -4,6 +4,8 @@ export default defineConfig({
    test: {
       include: ['tests/**/*.test.js'],
       clearMocks: true,
-      restoreMocks: true
+      restoreMocks: true,
+      clearScreen: false,
+      pool: 'forks'
    },
 });
