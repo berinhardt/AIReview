@@ -13,6 +13,7 @@ import { CreateFile, DeleteFile, ModifyFile, ReadFile, ListFiles } from "./tools
 import { GitStatus, GitDiffFile } from "./tools/GitTools.js";
 import { ReviewResult } from "./tools/ReviewTools.js";
 import { RunTests } from "./tools/TestTools.js";
+import { ShellTool } from "./tools/ShellTool.js";
 import { FileCommand } from "./commands/FileCommand.js";
 import { ResetCommand } from "./commands/ResetCommand.js";
 import { RoleCommand } from "./commands/RoleCommand.js";
@@ -75,7 +76,8 @@ async function main(opts) {
          GitStatus,
          GitDiffFile,
          ReviewResult,
-         RunTests]);
+         RunTests,
+         ShellTool]);
       agent.logger.pipe(LOGFILE);
 
       // Command Registry
