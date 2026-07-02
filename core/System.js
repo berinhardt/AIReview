@@ -3,156 +3,189 @@ import { fileURLToPath } from "url";
 import fsPromises, { access, constants, mkdir, readdir, realpath, stat, lstat } from "fs/promises";
 import fs from 'fs';
 import { execFileSync } from 'child_process';
+import os from "os";
+
+export function ProjectRoot() {
+   return path.resolve(Dirname(import.meta.url), "..");
+}
+
+export async function resolveRolePath(providedPath) {
+   const root = ProjectRoot();
+   const home = os.homedir();
+
+   const candidates = [
+      providedPath,
+      `${providedPath}.md`,
+      path.join(home, "prompts", providedPath),
+      path.join(home, "prompts", `${providedPath}.md`),
+      path.join(root, "prompts", providedPath),
+      path.join(root, "prompts", `${providedPath}.md`)
+   ];
+
+   for (const candidate of candidates) {
+      try {
+         await access(candidate, constants.R_OK);
+         const stats = await stat(candidate);
+         if (stats.isFile()) {
+            return candidate;
+         }
+      } catch (e) {
+         // Continue to next candidate
+      }
+   }
+
+   throw new Error(`File not found: ${providedPath}`);
+}
 
 export async function acquireLock(lockPath) {
-  try {
-    await mkdir(lockPath);
-    return true;
-  } catch (error) {
-    return false;
-  }
+   try {
+      await mkdir(lockPath);
+      return true;
+   } catch (error) {
+      return false;
+   }
 }
 
 export async function releaseLock(lockPath) {
-  await fsPromises.rm(lockPath, { recursive: true });
+   await fsPromises.rm(lockPath, { recursive: true });
 }
 
 export function Dirname(meta_url) {
-  return path.dirname(fileURLToPath(meta_url));
+   return path.dirname(fileURLToPath(meta_url));
 }
 export async function SanitizePath(filename, ENV) {
-  const { notesDir, targetDir } = ENV;
-  filename = path.join("sandbox", filename);
+   const { notesDir, targetDir } = ENV;
+   filename = path.join("sandbox", filename);
 
-  let baseDir = path.normalize(targetDir);
-  let relativePath = path.relative(path.join("sandbox", "drive"), filename);
+   let baseDir = path.normalize(targetDir);
+   let relativePath = path.relative(path.join("sandbox", "drive"), filename);
 
-  if (path.isAbsolute(relativePath) || relativePath.startsWith("..")) {
-    baseDir = path.normalize(notesDir);
-    relativePath = path.relative("sandbox", filename);
-  }
+   if (path.isAbsolute(relativePath) || relativePath.startsWith("..")) {
+      baseDir = path.normalize(notesDir);
+      relativePath = path.relative("sandbox", filename);
+   }
 
-  if (baseDir === targetDir && !targetDir)
-    throw new Error("Permission Denied");
-
-  if (baseDir === targetDir) {
-    try {
-      const stats = await stat(targetDir);
-      if (!stats.isDirectory())
-        throw new Error("Permission Denied");
-    } catch (e) {
+   if (baseDir === targetDir && !targetDir)
       throw new Error("Permission Denied");
-    }
-  }
 
-  // Resolve path
-  const resolvedPath = path.normalize(path.join(baseDir, relativePath));
+   if (baseDir === targetDir) {
+      try {
+         const stats = await stat(targetDir);
+         if (!stats.isDirectory())
+            throw new Error("Permission Denied");
+      } catch (e) {
+         throw new Error("Permission Denied");
+      }
+   }
 
-  // Check for symlinks in the path
-  let checkPath = resolvedPath;
-  while (true) {
-    try {
-      const stats = await lstat(checkPath);
-      if (stats.isSymbolicLink()) throw new Error("Permission Denied");
-    } catch (e) {
-      if (e.code !== "ENOENT")
-        throw new Error("Permission Denied");
-    }
+   // Resolve path
+   const resolvedPath = path.normalize(path.join(baseDir, relativePath));
 
-    if (checkPath.endsWith(path.sep)) checkPath = checkPath.substring(0, checkPath.length - 1);
-    if (checkPath === baseDir) break;
-    checkPath = path.dirname(checkPath);
-    const relative = path.relative(baseDir, checkPath);
-    if (relative.startsWith('..') || path.isAbsolute(relative))
-      throw new Error("Permission Denied");
-  }
+   // Check for symlinks in the path
+   let checkPath = resolvedPath;
+   while (true) {
+      try {
+         const stats = await lstat(checkPath);
+         if (stats.isSymbolicLink()) throw new Error("Permission Denied");
+      } catch (e) {
+         if (e.code !== "ENOENT")
+            throw new Error("Permission Denied");
+      }
 
-  return resolvedPath;
+      if (checkPath.endsWith(path.sep)) checkPath = checkPath.substring(0, checkPath.length - 1);
+      if (checkPath === baseDir) break;
+      checkPath = path.dirname(checkPath);
+      const relative = path.relative(baseDir, checkPath);
+      if (relative.startsWith('..') || path.isAbsolute(relative))
+         throw new Error("Permission Denied");
+   }
+
+   return resolvedPath;
 }
 
 export async function ValidateFile(filePath) {
-  try {
-    await access(filePath, constants.R_OK);
-    const stats = await stat(filePath);
-    if (!stats.isFile()) {
-      return { valid: false, error: "Path is not a file" };
-    }
-    return { valid: true };
-  } catch (error) {
-    return { valid: false, error: error.message };
-  }
+   try {
+      await access(filePath, constants.R_OK);
+      const stats = await stat(filePath);
+      if (!stats.isFile()) {
+         return { valid: false, error: "Path is not a file" };
+      }
+      return { valid: true };
+   } catch (error) {
+      return { valid: false, error: error.message };
+   }
 }
 
 export async function LoadLLMModel(model) {
-  const __dirname = path.join(Dirname(import.meta.url), "..");
+   const __dirname = path.join(Dirname(import.meta.url), "..");
 
-  const AVAILABLE_MODELS = await readdir(path.join(__dirname, "models"));
-  const [moduleName, moduleMethod] = model.split(/\./, 2);
-  if (AVAILABLE_MODELS.indexOf(`${moduleName}.js`) == -1) {
-    throw new Error(`Unknown Model Family ${model}`);
-  }
-  const modulePath = path.join(__dirname, "models", `${moduleName}.js`);
-  await access(modulePath, constants.F_OK);
-  const module = await import(`file://${modulePath}`);
-  const rval = module[moduleMethod];
-  if (!rval
-    || typeof rval !== 'object'
-    || typeof rval.request !== 'function'
-    || typeof rval.abort !== 'function'
-    || typeof rval.getName !== 'function') {
-    throw new Error(`Model ${model} must be a class-based model instance with request(), abort(), and getName() methods.`);
-  }
-  return rval;
+   const AVAILABLE_MODELS = await readdir(path.join(__dirname, "models"));
+   const [moduleName, moduleMethod] = model.split(/\./, 2);
+   if (AVAILABLE_MODELS.indexOf(`${moduleName}.js`) == -1) {
+      throw new Error(`Unknown Model Family ${model}`);
+   }
+   const modulePath = path.join(__dirname, "models", `${moduleName}.js`);
+   await access(modulePath, constants.F_OK);
+   const module = await import(`file://${modulePath}`);
+   const rval = module[moduleMethod];
+   if (!rval
+      || typeof rval !== 'object'
+      || typeof rval.request !== 'function'
+      || typeof rval.abort !== 'function'
+      || typeof rval.getName !== 'function') {
+      throw new Error(`Model ${model} must be a class-based model instance with request(), abort(), and getName() methods.`);
+   }
+   return rval;
 }
 
 export function validateNonNegativeInteger(value, defaultValue) {
-  const parsed = parseInt(value, 10);
-  if (isNaN(parsed) || parsed < 0) {
-    console.error(`Invalid non-negative integer provided: "${value}". Defaulting to ${defaultValue}.`);
-    return defaultValue;
-  }
-  return parsed;
+   const parsed = parseInt(value, 10);
+   if (isNaN(parsed) || parsed < 0) {
+      console.error(`Invalid non-negative integer provided: "${value}". Defaulting to ${defaultValue}.`);
+      return defaultValue;
+   }
+   return parsed;
 }
 export function isIgnored(filePath) {
-  try {
-    execFileSync('git', ['check-ignore', '-q', path.basename(filePath)], { cwd: path.dirname(filePath) });
-    return true;
-  } catch (error) {
-    return false;
-  }
+   try {
+      execFileSync('git', ['check-ignore', '-q', path.basename(filePath)], { cwd: path.dirname(filePath) });
+      return true;
+   } catch (error) {
+      return false;
+   }
 }
 
 export function runGitCommand(args, cwd = process.cwd()) {
-  try {
-    return execFileSync('git', args, { cwd, encoding: 'utf8' });
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      throw new Error('Git command not found');
-    }
-    if (error.code === 'EACCES') {
-      throw new Error('Permission denied');
-    }
-    if (error.stderr) {
-      const stderr = error.stderr.toString();
-      if (stderr.includes('not a git repository')) {
-        throw new Error('Not a git repository');
+   try {
+      return execFileSync('git', args, { cwd, encoding: 'utf8' });
+   } catch (error) {
+      if (error.code === 'ENOENT') {
+         throw new Error('Git command not found');
       }
-      throw new Error(`Git command failed: ${stderr.trim()}`);
-    }
-    throw error;
-  }
+      if (error.code === 'EACCES') {
+         throw new Error('Permission denied');
+      }
+      if (error.stderr) {
+         const stderr = error.stderr.toString();
+         if (stderr.includes('not a git repository')) {
+            throw new Error('Not a git repository');
+         }
+         throw new Error(`Git command failed: ${stderr.trim()}`);
+      }
+      throw error;
+   }
 }
 
 export function checkGitRepo(dir) {
-  if (!fs.existsSync(dir)) {
-    throw new Error('File not found');
-  }
-  try {
-    runGitCommand(['rev-parse', '--is-inside-work-tree'], dir);
-  } catch (error) {
-    if (error.message === 'Not a git repository') {
-      throw error;
-    }
-    throw new Error('Not a git repository');
-  }
+   if (!fs.existsSync(dir)) {
+      throw new Error('File not found');
+   }
+   try {
+      runGitCommand(['rev-parse', '--is-inside-work-tree'], dir);
+   } catch (error) {
+      if (error.message === 'Not a git repository') {
+         throw error;
+      }
+      throw new Error('Not a git repository');
+   }
 }
