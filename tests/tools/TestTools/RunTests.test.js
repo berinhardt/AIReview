@@ -13,9 +13,9 @@ vi.mock('child_process', () => ({
 }));
 
 
-import { RunTestsTool } from '../../../tools/TestTools/RunTestsTool.js';
+import { RunTests } from '../../../tools/TestTools/RunTests.js';
 
-describe('RunTestsTool', () => {
+describe('RunTests', () => {
    const ENV = { targetDir: '/mock/dir' };
 
    beforeEach(() => {
@@ -25,7 +25,7 @@ describe('RunTestsTool', () => {
    it('should block execution if package.json is modified', async () => {
       System.runGitCommand.mockReturnValue('M package.json');
 
-      const result = await RunTestsTool({}, ENV);
+      const result = await RunTests({}, ENV);
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('package.json has been modified');
@@ -38,7 +38,7 @@ describe('RunTestsTool', () => {
          callback(null, 'Test passed', '');
       });
 
-      const result = await RunTestsTool({}, ENV);
+      const result = await RunTests({}, ENV);
 
       expect(result.success).toBe(true);
       expect(result.result).toBe('Test passed');
@@ -53,7 +53,7 @@ describe('RunTestsTool', () => {
          callback(null, 'Test passed', '');
       });
 
-      const result = await RunTestsTool({ testfile: 'test.js' }, ENV);
+      const result = await RunTests({ testfile: 'test.js' }, ENV);
 
       expect(result.success).toBe(true);
       expect(execFile).toHaveBeenCalledWith('npm', ['run', 'test:docker', '--', '/mock/dir/test.js'], expect.any(Object), expect.any(Function));
@@ -68,7 +68,7 @@ describe('RunTestsTool', () => {
          callback(error, '', 'Error');
       });
 
-      const result = await RunTestsTool({}, ENV);
+      const result = await RunTests({}, ENV);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Error');

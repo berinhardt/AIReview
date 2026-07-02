@@ -71,7 +71,7 @@ export async function RunTests({ testfile }, ENV) {
    }
 }
 
-RunTestsTool.TOOLDEF = {
+RunTests.TOOLDEF = {
    type: 'function',
    name: 'RunTests',
    description: 'Execute tests in the Docker environment. Blocks if package.json is modified.',
