@@ -5,6 +5,7 @@ import { pipeline } from "stream/promises";
 import { AgentToolkit } from "./AgentToolkit.js";
 import { EventEmitter } from "events";
 import { setTimeout } from "timers/promises";
+import { resolveRolePath } from "./System.js";
 
 /**
  * Represents an AI Agent capable of performing tasks using tools and LLMs.
@@ -49,9 +50,10 @@ export class Agent {
     * @returns {Promise<void>}
     */
    async setPersonality(personalityInput) {
-      const content = await readFile(personalityInput, "utf8");
+      const resolvedPath = await resolveRolePath(personalityInput);
+      const content = await readFile(resolvedPath, "utf8");
       this.personality = content;
-      this.personalityName = path.basename(personalityInput, ".md");
+      this.personalityName = path.basename(resolvedPath, ".md");
    }
    /**
     * Gets the name of the current personality.
