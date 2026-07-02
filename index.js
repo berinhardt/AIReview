@@ -29,7 +29,7 @@ program.version("0.2.0")
    .option('-t, --task <task>', 'Task file', (val, memo) => [...memo, val], ["-"])
    .option('-o, --output <output>', 'Output file', '-')
    .option('-l, --logfile <logfile>', 'Agent log file', 'last.log')
-   .option('-Rr, --rpm-limit <rpm>', 'Max requests per minute', 0)
+   .option('-R, --rpm-limit <rpm>', 'Max requests per minute', 0)
    .option('-T, --tpm-limit <tpm>', 'Max tokens per minute', 0)
    .action(main)
    .parse(process.argv);
