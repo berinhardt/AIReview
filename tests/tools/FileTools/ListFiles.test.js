@@ -1,17 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { jest } from '@jest/globals';
 import { ListFiles } from '../../../tools/FileTools/ListFiles.js';
 import fs from 'fs/promises';
 import * as System from '../../../core/System.js';
 import path from 'path';
 
-vi.mock('fs/promises');
-vi.mock('../../../core/System.js');
+jest.mock('fs/promises');
+jest.mock('../../../core/System.js');
 
 describe('ListFiles', () => {
   const ENV = { notesDir: '/notes', targetDir: '/target' };
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
     System.SanitizePath.mockImplementation((p) => Promise.resolve(path.join('/notes', p)));
     System.isIgnored.mockReturnValue(false);
   });

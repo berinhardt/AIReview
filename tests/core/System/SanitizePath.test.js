@@ -1,22 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SanitizePath } from '../../../core/System.js';
-import * as fsPromises from 'fs/promises';
-import path from 'path';
+import { jest } from '@jest/globals';
 
 // Mock fs/promises
-vi.mock('fs/promises', async () => {
-   const actual = await vi.importActual('fs/promises');
-   const mock = {
-      ...actual,
-      stat: vi.fn(),
-      lstat: vi.fn(),
-      access: vi.fn(),
-   };
-   return {
-      ...mock,
-      default: mock,
-   };
-});
+jest.unstable_mockModule('fs/promises', () => ({
+   stat: jest.fn(),
+   lstat: jest.fn(),
+   access: jest.fn(),
+   constants: { R_OK: 1, F_OK: 1 },
+   default: {}
+}));
+
+const { SanitizePath } = await import('../../../core/System.js');
+const fsPromises = await import('fs/promises');
+const path = await import('path');
 
 describe('SanitizePath', () => {
    const ENV = {
@@ -25,7 +20,7 @@ describe('SanitizePath', () => {
    };
 
    beforeEach(() => {
-      //vi.clearAllMocks();
+      jest.clearAllMocks();
    });
 
    it('should resolve paths starting with / correctly using notesDir', async () => {

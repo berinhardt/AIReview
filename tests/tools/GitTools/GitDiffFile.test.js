@@ -1,10 +1,10 @@
-import { describe, it, expect, vi } from 'vitest';
+import { jest } from '@jest/globals';
 import { GitDiffFile } from '../../../tools/GitTools/GitDiffFile.js';
 import fs from 'fs';
 import * as System from '../../../core/System.js';
 
-vi.mock('fs');
-vi.mock('../../../core/System.js');
+jest.mock('fs');
+jest.mock('../../../core/System.js');
 
 describe('GitDiffFile', () => {
   it('should return diff successfully', async () => {

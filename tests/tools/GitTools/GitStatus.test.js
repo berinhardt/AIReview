@@ -1,8 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
+import { jest } from '@jest/globals';
 import { GitStatus } from '../../../tools/GitTools/GitStatus.js';
 import * as System from '../../../core/System.js';
 
-vi.mock('../../../core/System.js');
+jest.mock('../../../core/System.js');
 
 describe('GitStatus', () => {
   it('should return status successfully', async () => {

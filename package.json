@@ -6,10 +6,10 @@
       "dotenv": "^17.4.2"
    },
    "devDependencies": {
-      "vitest": "^3.0.0"
+      "jest": "^29.7.0"
    },
    "scripts": {
-      "test": "vitest run",
+      "test": "NODE_OPTIONS=--experimental-vm-modules jest",
       "test:docker": "docker build -t aireviewer-test-container . && docker run --rm aireviewer-test-container"
    }
 }

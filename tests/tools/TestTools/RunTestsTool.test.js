@@ -1,28 +1,42 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { jest } from '@jest/globals';
 import * as System from '../../../core/System.js';
 import { execFile } from 'child_process';
-
-vi.mock('../../../core/System.js', () => ({
-  SanitizePath: vi.fn(),
-  runGitCommand: vi.fn(),
-  ValidateFile: vi.fn(),
-}));
-
-vi.mock('child_process', () => ({
-  execFile: vi.fn(),
-}));
-
-vi.mock('util', () => ({
-  promisify: vi.fn((fn) => fn),
-}));
-
 import { RunTestsTool } from '../../../tools/TestTools/RunTestsTool.js';
+
+jest.mock('../../../core/System.js', () => ({
+  SanitizePath: jest.fn(),
+  runGitCommand: jest.fn(),
+  ValidateFile: jest.fn(),
+}));
+
+jest.mock('child_process', () => ({
+  execFile: jest.fn(),
+}));
+
+jest.mock('util', () => ({
+  promisify: jest.fn((fn) => {
+    return (...args) => {
+      return new Promise((resolve, reject) => {
+        fn(...args, (err, stdout, stderr) => {
+          if (err) {
+            const error = new Error(err.message || 'Error');
+            error.stdout = stdout;
+            error.stderr = stderr;
+            reject(error);
+          } else {
+            resolve({ stdout, stderr });
+          }
+        });
+      });
+    };
+  }),
+}));
 
 describe('RunTestsTool', () => {
   const ENV = { targetDir: '/mock/dir' };
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   it('should block execution if package.json is modified', async () => {
@@ -66,8 +80,7 @@ describe('RunTestsTool', () => {
     System.runGitCommand.mockReturnValue('');
     execFile.mockImplementation((cmd, args, options, callback) => {
       const error = new Error('Test failed');
-      error.stdout = '';
-      error.stderr = 'Error';
+      // The code expects error.stderr or error.message
       callback(error, '', 'Error');
     });
 
