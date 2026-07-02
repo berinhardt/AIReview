@@ -10,6 +10,6 @@
    },
    "scripts": {
       "test": "vitest run",
-      "test:docker": "docker build -t aireviewer-test-container . && docker run --rm aireviewer-test-container"
+      "test:docker": "docker build -t aireviewer-test-container . && docker run --rm aireviewer-test-container npm test"
    }
 }
