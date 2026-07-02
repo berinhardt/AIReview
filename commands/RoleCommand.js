@@ -36,7 +36,7 @@ export class RoleCommand extends Command {
          throw new Error("Error: Filename required.");
       }
 
-      await config.agent.setPersonality(filePath);
+      await config.agent.setPersonality(filename);
       return `Role loaded successfully from ${filename}.`;
    }
 }
