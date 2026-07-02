@@ -13,7 +13,7 @@ const TIMEOUT = 600000; // 10 minutes
  * @param {Object} ENV - The environment context.
  * @returns {Promise<{result: string, error: string | null, success: boolean}>}
  */
-export async function RunTestsTool({ testfile }, ENV) {
+export async function RunTests({ testfile }, ENV) {
    try {
       // 1. Safety Check: Check if package.json has been modified
       // We check for both staged and unstaged changes.
@@ -73,7 +73,7 @@ export async function RunTestsTool({ testfile }, ENV) {
 
 RunTestsTool.TOOLDEF = {
    type: 'function',
-   name: 'RunTestsTool',
+   name: 'RunTests',
    description: 'Execute tests in the Docker environment. Blocks if package.json is modified.',
    parameters: {
       type: 'object',

@@ -6,6 +6,8 @@ class GeminiLLM {
    constructor(modelConfig) {
       this.modelConfig = modelConfig;
       this.lastRequest = 0;
+      this.RPM_LIMIT = 0;
+      this.TPM_LIMIT = 0;
    }
 
    getName() {
@@ -89,7 +91,14 @@ class GeminiLLM {
                      break;
                   case 'interaction.completed':
                      stream.emit("complete", calculateCosts(this.modelConfig, data.interaction.usage));
-                     stream.push(null);
+                     const total_tokens = data.interaction?.usage?.total_tokens;
+                     const elapsed = Date.now() - this.lastRequest;
+                     const timeout = this.TPM_LIMIT > 0 ? total_tokens * 60000 / this.TPM_LIMIT - elapsed : -1;
+
+                     setTimeout(() => {
+                        stream.push(null);
+                     }, Math.max(0, timeout));
+                     stream.emit("status", `Waiting TPM ${timeout}ms`);
                      break;
                   case 'error':
                      console.error(data.error);
@@ -101,10 +110,10 @@ class GeminiLLM {
          }
       })
 
-      const now = Date.now();
-      const elapsed = (now - this.lastRequest);
-      const timeout = Math.max(0, 60000 / this.RPM_LIMIT - elapsed);
-      stream.emit("status", `Waiting... ${timeout}ms`);
+      const elapsed = (Date.now() - this.lastRequest);
+      const timeout = this.RPM_LIMIT > 0 ? Math.max(0, 60000 / this.RPM_LIMIT - elapsed) : 0;
+      this.lastRequest += elapsed;
+      stream.emit("status", `Waiting RPM ${timeout}ms`);
       setTimeout(sendRequest, timeout);
 
       return stream;
