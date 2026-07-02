@@ -111,7 +111,7 @@ class GeminiLLM {
       })
 
       const elapsed = (Date.now() - this.lastRequest);
-      const timeout = Math.max(0, 60000 / this.RPM_LIMIT - elapsed);
+      const timeout = this.RPM_LIMIT > 0 ? Math.max(0, 60000 / this.RPM_LIMIT - elapsed) : 0;
       this.lastRequest += elapsed;
       stream.emit("status", `Waiting RPM ${timeout}ms`);
       setTimeout(sendRequest, timeout);
