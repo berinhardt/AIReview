@@ -56,7 +56,7 @@ describe('RunTests', () => {
       const result = await RunTests({ testfile: 'test.js' }, ENV);
 
       expect(result.success).toBe(true);
-      expect(execFile).toHaveBeenCalledWith('npm', ['run', 'test:docker', '--', '/mock/dir/test.js'], expect.any(Object), expect.any(Function));
+      expect(execFile).toHaveBeenCalledWith('npm', ['run', 'test:docker', '--', 'npm', 'test', 'test.js'], expect.any(Object), expect.any(Function));
    });
 
    it('should handle test failure', async () => {

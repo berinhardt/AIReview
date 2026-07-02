@@ -20,7 +20,28 @@ export class DevLoopCommand extends Command {
          description: 'Runs a development loop with a coder and reviewer.',
          arguments: [{ name: 'featureFile', type: 'string', description: 'The path to the feature file.' }]
       };
+      this.coderId = null;
+      this.reviewerId = null;
+      this.coderFileSent = false;
+      this.reviewerFileSent = false;
+      this.reviewAccepted = false;
+      this.agent = null;
    }
+
+   setAgentId(id) {
+      if (this.agent) {
+         this.agent.id = id;
+      }
+   }
+
+   getAgentId() {
+      return this.agent ? this.agent.id : null;
+   }
+
+   /**
+    * Resets agent state between tasks, preserving cost.
+    * @param {Object} agent 
+    */
 
    /**
     * Executes the development loop.
@@ -36,6 +57,7 @@ export class DevLoopCommand extends Command {
    async execute(args, config) {
       const { featureFile } = args;
       const { agent, outputStream } = config;
+      this.agent = agent;
       if (!featureFile) {
          return "Error: Missing <Feature-File> argument.";
       }
@@ -57,6 +79,9 @@ export class DevLoopCommand extends Command {
       }
 
       const runTask = async (personality, taskContent) => {
+         if (!taskContent || taskContent.trim() === "") {
+            return; // Skip empty tasks
+         }
          await agent.setPersonality(personality);
          const stream = agent.Task(taskContent);
          await pipeline(stream, outputStream, { end: false });
@@ -66,14 +91,26 @@ export class DevLoopCommand extends Command {
       try {
          const target = agent.tools.ENV.targetDir;
          const sandbox = agent.tools.ENV.notesDir;
-         agent.notes.reviewAccepted = false;
+         this.reviewAccepted = false;
+
+         // Reset agent at the beginning of the loop
+         agent.restart();
+
          while (iteration <= MAX_LOOP_ITERATIONS) {
             agent.Status(`Iteration ${iteration}/${MAX_LOOP_ITERATIONS}`);
 
             // 1. Coder
             agent.Status("--- Coder ---");
-            agent.restart();
-            let coderTask = await readFile(absoluteFeatureFile, 'utf8');
+
+            // Restore Coder ID
+            if (iteration > 0)
+               this.setAgentId(this.coderId);
+
+            let coderTask = "";
+            if (!this.coderFileSent) {
+               coderTask = await readFile(absoluteFeatureFile, 'utf8');
+               this.coderFileSent = true;
+            }
 
             // Add Review.md (mandatory) and Improvements.md (optional) if they exist in sandbox 
 
@@ -98,14 +135,37 @@ export class DevLoopCommand extends Command {
                // Optional, ignore
             }
             await runTask(coderPersonality, coderTask);
+
+            // Capture Coder ID
+            this.coderId = this.getAgentId();
+
             runGitCommand(['add', '*'], target);
+
+            // Clear state between Coder and Reviewer
+
             // 2. Reviewer
             agent.Status("--- Reviewer ---");
-            agent.restart();
-            const reviewerTask = await readFile(absoluteFeatureFile, 'utf8');
+
+            // Restore Reviewer ID
+            if (iteration > 0) this.setAgentId(this.reviewerId);
+
+            let reviewerTask = "";
+            if (!this.reviewerFileSent) {
+               reviewerTask = await readFile(absoluteFeatureFile, 'utf8');
+               this.reviewerFileSent = true;
+            }
+
             await runTask(reviewerPersonality, reviewerTask);
 
-            if (agent.notes.reviewAccepted) {
+            // Capture Reviewer ID
+            this.reviewerId = this.getAgentId();
+
+            // Capture review status before clearing state
+            this.reviewAccepted = agent.notes.reviewAccepted || false;
+
+            // Clear state between Reviewer and next iteration
+
+            if (this.reviewAccepted) {
                return "DevLoop completed successfully.";
             }
 

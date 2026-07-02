@@ -1,6 +1,7 @@
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { SanitizePath, runGitCommand, ValidateFile } from "../../core/System.js";
+import path from "path";
 
 const execFileAsync = promisify(execFile);
 const TIMEOUT = 600000; // 10 minutes
@@ -31,6 +32,7 @@ export async function RunTests({ testfile }, ENV) {
       if (testfile) {
          // 2. Input Validation: Sanitize path
          const sanitizedPath = await SanitizePath(testfile, ENV);
+         const relativePath = path.relative(ENV.targetDir, sanitizedPath);
 
          // Verify file exists
          const validation = await ValidateFile(sanitizedPath);
@@ -43,7 +45,7 @@ export async function RunTests({ testfile }, ENV) {
          }
 
          // Use the sanitized path
-         commandArgs.push('--', sanitizedPath);
+         commandArgs.push('--', "npm", "test", relativePath);
       }
 
       // 3. Execution
