@@ -23,6 +23,34 @@ describe('CreateFile', () => {
       expect(fs.writeFile).toHaveBeenCalledWith('/abs/path/test.txt', 'hello', { encoding: 'utf8', flag: 'wx' });
    });
 
+   it('should overwrite a file successfully when overrideIfExists is true', async () => {
+      const params = { filename: 'test.txt', content: 'hello', overrideIfExists: true };
+      const ENV = {};
+
+      SanitizePath.mockResolvedValue('/abs/path/test.txt');
+      fs.mkdir.mockResolvedValue();
+      fs.writeFile.mockResolvedValue();
+
+      const result = await CreateFile(params, ENV);
+
+      expect(result).toEqual({ result: 'Success' });
+      expect(fs.writeFile).toHaveBeenCalledWith('/abs/path/test.txt', 'hello', { encoding: 'utf8', flag: 'w' });
+   });
+
+   it('should fail to create a file when overrideIfExists is false (default)', async () => {
+      const params = { filename: 'test.txt', content: 'hello', overrideIfExists: false };
+      const ENV = {};
+
+      SanitizePath.mockResolvedValue('/abs/path/test.txt');
+      fs.mkdir.mockResolvedValue();
+      fs.writeFile.mockResolvedValue();
+
+      const result = await CreateFile(params, ENV);
+
+      expect(result).toEqual({ result: 'Success' });
+      expect(fs.writeFile).toHaveBeenCalledWith('/abs/path/test.txt', 'hello', { encoding: 'utf8', flag: 'wx' });
+   });
+
    it('should return failure when SanitizePath fails', async () => {
       const params = { filename: 'test.txt', content: 'hello' };
       const ENV = {};
